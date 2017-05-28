@@ -32,7 +32,6 @@ In most cases only the common name, organization name and the country is provide
 	}
 
 	if err := client.CreateSubject(subj); err != nil {
-		fmt.Println("got an error")
 		return errors.Wrap(err, "could not create new subject")
 	}
 	return nil

@@ -40,28 +40,16 @@ func main() {
 		err = setSubject(args, client)
 	case `show-subj`:
 		err = showSubject(args, client)
-	//	case `list`:
-	//		err = listDescription(args, client)
-	//	case `create-file`:
-	//		err = createFile(args, client)
-	//	case `list-files`:
-	//		err = listFile(args, client)
-	//	case `delete-file`:
-	//		err = deleteFile(args, client)
-	//	case `create-private-key`:
-	//		err = createPrivateKey(args, client)
-	//	case `get-private-key`:
-	//		err = getPrivateKey(args, client)
-	//	case `list-private-keys`:
-	//		err = listPrivateKey(args, client)
-	//	case `delete-private-key`:
-	//		err = deletePrivateKey(args, client)
-	//	case `create-public-key`:
-	//		err = createPublicKey(args, client)
-	//	case `list-public-keys`:
-	//		err = listPublicKey(args, client)
-	//	case `delete-public-key`:
-	//		err = deletePublicKey(args, client)
+	case `create-private`:
+		err = createPrivateKey(args, client)
+	case `delete-private`:
+		err = deletePrivateKey(args, client)
+	case `list-private`:
+		err = listPrivateKey(args, client)
+	case `set-private`:
+		err = setPrivateKey(args, client)
+	case `show-private`:
+		err = showPrivateKey(args, client)
 	default:
 		fmt.Printf("unknown subcommand '%s'\n", cmd)
 		printCommands()

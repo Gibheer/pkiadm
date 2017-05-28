@@ -39,7 +39,7 @@ func (c *Client) ShowSubject(id string) (Subject, error) {
 	subj := ResourceName{ID: id, Type: RTSubject}
 	result := &ResultSubjects{}
 	if err := c.query("ShowSubject", subj, result); err != nil {
-		return Subject{}, nil
+		return Subject{}, err
 	}
 	if result.Result.HasError {
 		return Subject{}, result.Result.Error

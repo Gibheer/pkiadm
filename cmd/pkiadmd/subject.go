@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/x509/pkix"
+	"fmt"
 
 	"github.com/gibheer/pkiadm"
 )
@@ -90,10 +91,13 @@ func (s *Server) SetSubject(changeset pkiadm.SubjectChange, res *pkiadm.Result) 
 			subj.Data.StreetAddress = changes.StreetAddress
 		case "code":
 			subj.Data.PostalCode = changes.PostalCode
+		default:
+			res.SetError(fmt.Errorf("unknown field"), "unknown field '%s'", field)
+			return nil
 		}
 	}
 	if err := s.storage.Update(ResourceName{ID: subj.ID, Type: RTSubject}); err != nil {
-		res.SetError(err, "Could update resource '%s'", changeset.Subject.ID)
+		res.SetError(err, "Could not update subject '%s'", changeset.Subject.ID)
 		return nil
 	}
 	return s.store(res)

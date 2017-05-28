@@ -6,12 +6,7 @@ import (
 	"fmt"
 
 	"github.com/gibheer/pki"
-)
-
-const (
-	PKTRSA PrivateKeyType = iota
-	PKTECDSA
-	PKTED25519
+	"github.com/gibheer/pkiadm"
 )
 
 const (
@@ -23,24 +18,23 @@ const (
 type (
 	PrivateKey struct {
 		ID     string
-		PKType PrivateKeyType
-		Length uint
+		PKType pkiadm.PrivateKeyType
+		Bits   uint
 		Key    []byte
 	}
-	PrivateKeyType uint
 )
 
-func NewPrivateKey(id string, pkType PrivateKeyType, length uint) (*PrivateKey, error) {
+func NewPrivateKey(id string, pkType pkiadm.PrivateKeyType, bits uint) (*PrivateKey, error) {
 	if id == "" {
 		return nil, ENoIDGiven
 	}
-	if err := verifyPK(pkType, length); err != nil {
+	if err := verifyPK(pkType, bits); err != nil {
 		return nil, err
 	}
 	pk := PrivateKey{
 		ID:     id,
 		PKType: pkType,
-		Length: length,
+		Bits:   bits,
 	}
 	return &pk, nil
 }
@@ -67,13 +61,13 @@ func (p *PrivateKey) Refresh(_ *Storage) error {
 		err error
 	)
 	switch p.PKType {
-	case PKTRSA:
-		key, err = pki.NewPrivateKeyRsa(int(p.Length))
-	case PKTED25519:
+	case pkiadm.PKTRSA:
+		key, err = pki.NewPrivateKeyRsa(int(p.Bits))
+	case pkiadm.PKTED25519:
 		key, err = pki.NewPrivateKeyEd25519()
-	case PKTECDSA:
+	case pkiadm.PKTECDSA:
 		var curve elliptic.Curve
-		switch p.Length {
+		switch p.Bits {
 		case 224:
 			curve = elliptic.P224()
 		case 256:
@@ -120,20 +114,20 @@ func (p *PrivateKey) GetKey() (pki.PrivateKey, error) {
 	return key, nil
 }
 
-func verifyPK(pkType PrivateKeyType, length uint) error {
+func verifyPK(pkType pkiadm.PrivateKeyType, bits uint) error {
 	switch pkType {
-	case PKTRSA:
-		if length < 1024 || length > 32768 {
+	case pkiadm.PKTRSA:
+		if bits < 1024 || bits > 32768 {
 			return ELengthOutOfBounds
 		}
-	case PKTECDSA:
-		switch length {
+	case pkiadm.PKTECDSA:
+		switch bits {
 		case 224, 256, 384, 521:
 		default:
 			return EWrongKeyLength
 		}
-	case PKTED25519:
-		if length != 256 {
+	case pkiadm.PKTED25519:
+		if bits != 256 {
 			return EWrongKeyLengthED25519
 		}
 	default:
@@ -142,9 +136,92 @@ func verifyPK(pkType PrivateKeyType, length uint) error {
 	return nil
 }
 
-//func (p *PrivateKey) MarshalJSON() ([]byte, error) {
-//	return json.Marshal(*p)
-//}
-//func (p *PrivateKey) UnmarshalJSON(raw []byte) error {
-//	return json.Unmarshal(raw, p)
-//}
+func (s *Server) CreatePrivateKey(inPk pkiadm.PrivateKey, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	pk, err := NewPrivateKey(inPk.ID, inPk.Type, inPk.Bits)
+	if err != nil {
+		res.SetError(err, "Could not create new private key '%s'", inPk.ID)
+		return nil
+	}
+	if err := s.storage.AddPrivateKey(pk); err != nil {
+		res.SetError(err, "Could not add private key '%s'", inPk.ID)
+		return nil
+	}
+	return nil
+}
+func (s *Server) SetPrivateKey(changeset pkiadm.PrivateKeyChange, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	pk, err := s.storage.GetPrivateKey(ResourceName{ID: changeset.PrivateKey.ID, Type: RTPrivateKey})
+	if err != nil {
+		res.SetError(err, "Could not find private key '%s'", changeset.PrivateKey.ID)
+		return nil
+	}
+
+	for _, field := range changeset.FieldList {
+		switch field {
+		case "type":
+			pk.PKType = changeset.PrivateKey.Type
+		case "bits":
+			pk.Bits = changeset.PrivateKey.Bits
+		default:
+			res.SetError(fmt.Errorf("unknown field"), "unknown field '%s'", field)
+			return nil
+		}
+	}
+	if err := s.storage.Update(ResourceName{ID: pk.ID, Type: RTPrivateKey}); err != nil {
+		res.SetError(err, "Could not update private key '%s'", changeset.PrivateKey.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) DeletePrivateKey(inPk pkiadm.ResourceName, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	pk, err := s.storage.GetPrivateKey(ResourceName{ID: inPk.ID, Type: RTPrivateKey})
+	if err != nil {
+		res.SetError(err, "Could not find private key '%s'", inPk.ID)
+		return nil
+	}
+
+	if err := s.storage.Remove(pk); err != nil {
+		res.SetError(err, "Could not remove private key '%s'", pk.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) ShowPrivateKey(inPk pkiadm.ResourceName, res *pkiadm.ResultPrivateKey) error {
+	s.lock()
+	defer s.unlock()
+
+	pk, err := s.storage.GetPrivateKey(ResourceName{ID: inPk.ID, Type: RTPrivateKey})
+	if err != nil {
+		res.Result.SetError(err, "Could not find private key '%s'", inPk.ID)
+		return nil
+	}
+	res.PrivateKeys = []pkiadm.PrivateKey{pkiadm.PrivateKey{
+		ID:       pk.ID,
+		Type:     pk.PKType,
+		Bits:     pk.Bits,
+		Checksum: pk.Checksum(),
+	}}
+	return nil
+}
+func (s *Server) ListPrivateKey(filter pkiadm.Filter, res *pkiadm.ResultPrivateKey) error {
+	s.lock()
+	defer s.unlock()
+
+	for _, pk := range s.storage.PrivateKeys {
+		res.PrivateKeys = append(res.PrivateKeys, pkiadm.PrivateKey{
+			ID:       pk.ID,
+			Type:     pk.PKType,
+			Bits:     pk.Bits,
+			Checksum: pk.Checksum(),
+		})
+	}
+	return nil
+}
