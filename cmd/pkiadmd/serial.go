@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"math/big"
+
+	"github.com/gibheer/pkiadm"
 )
 
 const (
@@ -28,7 +30,7 @@ func NewSerial(id string, min, max int64) (*Serial, error) {
 }
 
 // Return the unique ResourceName
-func (s *Serial) Name() ResourceName { return ResourceName{s.ID, RTSerial} }
+func (s *Serial) Name() pkiadm.ResourceName { return pkiadm.ResourceName{s.ID, pkiadm.RTSerial} }
 
 // AddDependency registers a depending resource to be retuened by Dependencies()
 // Refresh must trigger a rebuild of the resource.
@@ -43,7 +45,7 @@ func (s *Serial) Pem() ([]byte, error) { return []byte{}, nil }
 func (s *Serial) Checksum() []byte     { return []byte{} }
 
 // DependsOn must return the resource names it is depending on.
-func (s *Serial) DependsOn() []ResourceName { return []ResourceName{} }
+func (s *Serial) DependsOn() []pkiadm.ResourceName { return []pkiadm.ResourceName{} }
 
 // Generate generates a new serial number and stores it to avoid double
 // assigning.

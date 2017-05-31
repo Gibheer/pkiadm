@@ -37,6 +37,7 @@ const (
 	RTLocation
 	RTSerial
 	RTSubject
+	RTUnknown
 )
 
 type ResourceName struct {

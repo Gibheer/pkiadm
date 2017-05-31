@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/gibheer/pkiadm"
 	"github.com/pkg/errors"
 )
 
@@ -193,24 +194,24 @@ func (s *Storage) AddLocation(l *Location) error {
 }
 
 // Get figures out the resource to the ResourceName if available.
-func (s *Storage) Get(r ResourceName) (Resource, error) {
+func (s *Storage) Get(r pkiadm.ResourceName) (Resource, error) {
 	if r.ID == "" {
 		return nil, ENoIDGiven
 	}
 	switch r.Type {
-	case RTSerial:
+	case pkiadm.RTSerial:
 		return s.GetSerial(r)
-	case RTSubject:
+	case pkiadm.RTSubject:
 		return s.GetSubject(r)
-	case RTPrivateKey:
+	case pkiadm.RTPrivateKey:
 		return s.GetPrivateKey(r)
-	case RTPublicKey:
+	case pkiadm.RTPublicKey:
 		return s.GetPublicKey(r)
-	case RTCSR:
+	case pkiadm.RTCSR:
 		return s.GetCSR(r)
-	case RTCertificate:
+	case pkiadm.RTCertificate:
 		return s.GetCertificate(r)
-	case RTLocation:
+	case pkiadm.RTLocation:
 		return s.GetLocation(r)
 	default:
 		return nil, EUnknownType
@@ -218,7 +219,7 @@ func (s *Storage) Get(r ResourceName) (Resource, error) {
 }
 
 // GetSerial returns the Serial matching the ResourceName.
-func (s *Storage) GetSerial(r ResourceName) (*Serial, error) {
+func (s *Storage) GetSerial(r pkiadm.ResourceName) (*Serial, error) {
 	if se, found := s.Serials[r.ID]; found {
 		return se, nil
 	}
@@ -226,7 +227,7 @@ func (s *Storage) GetSerial(r ResourceName) (*Serial, error) {
 }
 
 // GetSubject returns the Subject matching the ResourceName.
-func (s *Storage) GetSubject(r ResourceName) (*Subject, error) {
+func (s *Storage) GetSubject(r pkiadm.ResourceName) (*Subject, error) {
 	if se, found := s.Subjects[r.ID]; found {
 		return se, nil
 	}
@@ -234,7 +235,7 @@ func (s *Storage) GetSubject(r ResourceName) (*Subject, error) {
 }
 
 // GetPrivateKey returns the PrivateKey to the ResourceName.
-func (s *Storage) GetPrivateKey(r ResourceName) (*PrivateKey, error) {
+func (s *Storage) GetPrivateKey(r pkiadm.ResourceName) (*PrivateKey, error) {
 	if pk, found := s.PrivateKeys[r.ID]; found {
 		return pk, nil
 	}
@@ -242,7 +243,7 @@ func (s *Storage) GetPrivateKey(r ResourceName) (*PrivateKey, error) {
 }
 
 // GetPublicKey returns the PublicKey to the ResourceName.
-func (s *Storage) GetPublicKey(r ResourceName) (*PublicKey, error) {
+func (s *Storage) GetPublicKey(r pkiadm.ResourceName) (*PublicKey, error) {
 	if res, found := s.PublicKeys[r.ID]; found {
 		return res, nil
 	}
@@ -250,7 +251,7 @@ func (s *Storage) GetPublicKey(r ResourceName) (*PublicKey, error) {
 }
 
 // GetCSR returns the CSR to the CSR.
-func (s *Storage) GetCSR(r ResourceName) (*CSR, error) {
+func (s *Storage) GetCSR(r pkiadm.ResourceName) (*CSR, error) {
 	if res, found := s.CSRs[r.ID]; found {
 		return res, nil
 	}
@@ -258,7 +259,7 @@ func (s *Storage) GetCSR(r ResourceName) (*CSR, error) {
 }
 
 // GetCertificate returns the Certificate matching the ResourceName.
-func (s *Storage) GetCertificate(r ResourceName) (*Certificate, error) {
+func (s *Storage) GetCertificate(r pkiadm.ResourceName) (*Certificate, error) {
 	if res, found := s.Certificates[r.ID]; found {
 		return res, nil
 	}
@@ -266,7 +267,7 @@ func (s *Storage) GetCertificate(r ResourceName) (*Certificate, error) {
 }
 
 // GetLocation returns the Location matching the ResourceName.
-func (s *Storage) GetLocation(r ResourceName) (*Location, error) {
+func (s *Storage) GetLocation(r pkiadm.ResourceName) (*Location, error) {
 	if res, found := s.Locations[r.ID]; found {
 		return res, nil
 	}
@@ -277,19 +278,19 @@ func (s *Storage) GetLocation(r ResourceName) (*Location, error) {
 func (s *Storage) Remove(r Resource) error {
 	// TODO implement unable to remove when having dependencies
 	switch r.Name().Type {
-	case RTSerial:
+	case pkiadm.RTSerial:
 		delete(s.Serials, r.Name().ID)
-	case RTSubject:
+	case pkiadm.RTSubject:
 		delete(s.Subjects, r.Name().ID)
-	case RTPrivateKey:
+	case pkiadm.RTPrivateKey:
 		delete(s.PrivateKeys, r.Name().ID)
-	case RTPublicKey:
+	case pkiadm.RTPublicKey:
 		delete(s.PublicKeys, r.Name().ID)
-	case RTCSR:
+	case pkiadm.RTCSR:
 		delete(s.CSRs, r.Name().ID)
-	case RTCertificate:
+	case pkiadm.RTCertificate:
 		delete(s.Certificates, r.Name().ID)
-	case RTLocation:
+	case pkiadm.RTLocation:
 		delete(s.Locations, r.Name().ID)
 	default:
 		return EUnknownType
@@ -303,7 +304,7 @@ func (s *Storage) Remove(r Resource) error {
 }
 
 // Update sends a refresh through all resources depending on the one given.
-func (s *Storage) Update(rn ResourceName) error {
+func (s *Storage) Update(rn pkiadm.ResourceName) error {
 	r, err := s.Get(rn)
 	if err != nil {
 		return err

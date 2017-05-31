@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/gibheer/pki"
+	"github.com/gibheer/pkiadm"
 )
 
 type (
@@ -19,8 +20,8 @@ type (
 		IPAddresses    []net.IP
 
 		// PrivateKey is needed to sign the certificate sign request.
-		PrivateKey ResourceName
-		Subject    ResourceName
+		PrivateKey pkiadm.ResourceName
+		Subject    pkiadm.ResourceName
 
 		// Data contains the pem representation of the CSR.
 		Data []byte
@@ -28,7 +29,7 @@ type (
 )
 
 // NewCSR creates a new CSR.
-func NewCSR(id string, pk, subject ResourceName, commonName string, dnsNames []string,
+func NewCSR(id string, pk, subject pkiadm.ResourceName, commonName string, dnsNames []string,
 	emailAddresses []string, iPAddresses []net.IP) (*CSR, error) {
 	return &CSR{
 		ID:             id,
@@ -42,8 +43,8 @@ func NewCSR(id string, pk, subject ResourceName, commonName string, dnsNames []s
 }
 
 // Return the unique ResourceName
-func (c *CSR) Name() ResourceName {
-	return ResourceName{c.ID, RTCSR}
+func (c *CSR) Name() pkiadm.ResourceName {
+	return pkiadm.ResourceName{c.ID, pkiadm.RTCSR}
 }
 
 // AddDependency registers a depending resource to be retuened by Dependencies()
@@ -88,8 +89,8 @@ func (c *CSR) Pem() ([]byte, error) { return c.Data, nil }
 func (c *CSR) Checksum() []byte     { return Hash(c.Data) }
 
 // DependsOn must return the resource names it is depending on.
-func (c *CSR) DependsOn() []ResourceName {
-	return []ResourceName{c.PrivateKey}
+func (c *CSR) DependsOn() []pkiadm.ResourceName {
+	return []pkiadm.ResourceName{c.PrivateKey}
 }
 
 func (c *CSR) GetCSR() (*pki.CertificateRequest, error) {

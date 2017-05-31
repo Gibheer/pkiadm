@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gibheer/pki"
+	"github.com/gibheer/pkiadm"
 )
 
 type (
@@ -14,16 +15,16 @@ type (
 		IsCA     bool
 		Duration time.Duration
 
-		PrivateKey ResourceName
-		Serial     ResourceName
-		CSR        ResourceName
-		CA         ResourceName
+		PrivateKey pkiadm.ResourceName
+		Serial     pkiadm.ResourceName
+		CSR        pkiadm.ResourceName
+		CA         pkiadm.ResourceName
 
 		Data []byte
 	}
 )
 
-func NewCertificate(id string, privateKey, serial, csr, ca ResourceName, isCA bool, duration time.Duration) (*Certificate, error) {
+func NewCertificate(id string, privateKey, serial, csr, ca pkiadm.ResourceName, isCA bool, duration time.Duration) (*Certificate, error) {
 	return &Certificate{
 		ID:         id,
 		PrivateKey: privateKey,
@@ -36,8 +37,8 @@ func NewCertificate(id string, privateKey, serial, csr, ca ResourceName, isCA bo
 }
 
 // Return the unique ResourceName
-func (c *Certificate) Name() ResourceName {
-	return ResourceName{c.ID, RTCertificate}
+func (c *Certificate) Name() pkiadm.ResourceName {
+	return pkiadm.ResourceName{c.ID, pkiadm.RTCertificate}
 }
 
 // AddDependency registers a depending resource to be retuened by Dependencies()
@@ -116,8 +117,8 @@ func (c *Certificate) Pem() ([]byte, error) { return c.Data, nil }
 func (c *Certificate) Checksum() []byte     { return Hash(c.Data) }
 
 // DependsOn must return the resource names it is depending on.
-func (c *Certificate) DependsOn() []ResourceName {
-	res := []ResourceName{
+func (c *Certificate) DependsOn() []pkiadm.ResourceName {
+	res := []pkiadm.ResourceName{
 		c.PrivateKey,
 		c.Serial,
 		c.CSR,

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/pem"
+
+	"github.com/gibheer/pkiadm"
 )
 
 const (
@@ -14,7 +16,7 @@ type (
 	PublicKey struct {
 		ID string
 
-		PrivateKey ResourceName
+		PrivateKey pkiadm.ResourceName
 		Type       PublicKeyType // mark the type of the public key
 		Key        []byte
 	}
@@ -22,7 +24,7 @@ type (
 	PublicKeyType uint
 )
 
-func NewPublicKey(id string, pk ResourceName) (*PublicKey, error) {
+func NewPublicKey(id string, pk pkiadm.ResourceName) (*PublicKey, error) {
 	pub := PublicKey{
 		ID:         id,
 		PrivateKey: pk,
@@ -30,8 +32,8 @@ func NewPublicKey(id string, pk ResourceName) (*PublicKey, error) {
 	return &pub, nil
 }
 
-func (p *PublicKey) Name() ResourceName {
-	return ResourceName{p.ID, RTPublicKey}
+func (p *PublicKey) Name() pkiadm.ResourceName {
+	return pkiadm.ResourceName{p.ID, pkiadm.RTPublicKey}
 }
 
 func (p *PublicKey) Refresh(lookup *Storage) error {
@@ -57,8 +59,8 @@ func (p *PublicKey) Refresh(lookup *Storage) error {
 	return nil
 }
 
-func (p *PublicKey) DependsOn() []ResourceName {
-	return []ResourceName{p.PrivateKey}
+func (p *PublicKey) DependsOn() []pkiadm.ResourceName {
+	return []pkiadm.ResourceName{p.PrivateKey}
 }
 
 func (p *PublicKey) Pem() ([]byte, error) {

@@ -50,6 +50,16 @@ func main() {
 		err = setPrivateKey(args, client)
 	case `show-private`:
 		err = showPrivateKey(args, client)
+	case `create-location`:
+		err = createLocation(args, client)
+	case `delete-location`:
+		err = deleteLocation(args, client)
+	case `list-location`:
+		err = listLocation(args, client)
+	case `set-location`:
+		err = setLocation(args, client)
+	case `show-location`:
+		err = showLocation(args, client)
 	default:
 		fmt.Printf("unknown subcommand '%s'\n", cmd)
 		printCommands()

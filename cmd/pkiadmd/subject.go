@@ -24,7 +24,7 @@ func NewSubject(id string, name pkix.Name) (*Subject, error) {
 }
 
 // Return the unique ResourceName
-func (sub *Subject) Name() ResourceName { return ResourceName{sub.ID, RTSubject} }
+func (sub *Subject) Name() pkiadm.ResourceName { return pkiadm.ResourceName{sub.ID, pkiadm.RTSubject} }
 
 // AddDependency registers a depending resource to be retuened by Dependencies()
 // Refresh must trigger a rebuild of the resource.
@@ -36,7 +36,7 @@ func (sub *Subject) Pem() ([]byte, error) { return []byte{}, nil }
 func (sub *Subject) Checksum() []byte     { return []byte{} }
 
 // DependsOn must return the resource names it is depending on.
-func (sub *Subject) DependsOn() []ResourceName { return []ResourceName{} }
+func (sub *Subject) DependsOn() []pkiadm.ResourceName { return []pkiadm.ResourceName{} }
 
 // GetName returns the stored name definition.
 func (sub *Subject) GetName() pkix.Name {
@@ -65,7 +65,7 @@ func (s *Server) SetSubject(changeset pkiadm.SubjectChange, res *pkiadm.Result) 
 	s.lock()
 	defer s.unlock()
 
-	subj, err := s.storage.GetSubject(ResourceName{ID: changeset.Subject.ID, Type: RTSubject})
+	subj, err := s.storage.GetSubject(pkiadm.ResourceName{ID: changeset.Subject.ID, Type: pkiadm.RTSubject})
 	if err != nil {
 		res.SetError(err, "Could not find subject '%s'", changeset.Subject.ID)
 		return nil
@@ -96,7 +96,7 @@ func (s *Server) SetSubject(changeset pkiadm.SubjectChange, res *pkiadm.Result) 
 			return nil
 		}
 	}
-	if err := s.storage.Update(ResourceName{ID: subj.ID, Type: RTSubject}); err != nil {
+	if err := s.storage.Update(pkiadm.ResourceName{ID: subj.ID, Type: pkiadm.RTSubject}); err != nil {
 		res.SetError(err, "Could not update subject '%s'", changeset.Subject.ID)
 		return nil
 	}
@@ -122,7 +122,7 @@ func (s *Server) DeleteSubject(inSubj pkiadm.ResourceName, res *pkiadm.Result) e
 	s.lock()
 	defer s.unlock()
 
-	subj, err := s.storage.Get(ResourceName{ID: inSubj.ID, Type: RTSubject})
+	subj, err := s.storage.Get(pkiadm.ResourceName{ID: inSubj.ID, Type: pkiadm.RTSubject})
 	if err == ENotFound {
 		return nil
 	} else if err != nil {
@@ -142,7 +142,7 @@ func (s *Server) ShowSubject(inSubj pkiadm.ResourceName, res *pkiadm.ResultSubje
 	s.lock()
 	defer s.unlock()
 
-	subj, err := s.storage.GetSubject(ResourceName{ID: inSubj.ID, Type: RTSubject})
+	subj, err := s.storage.GetSubject(pkiadm.ResourceName{ID: inSubj.ID, Type: pkiadm.RTSubject})
 	if err == ENotFound {
 		return nil
 	} else if err != nil {

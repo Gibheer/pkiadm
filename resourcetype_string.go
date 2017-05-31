@@ -4,13 +4,46 @@ package pkiadm
 
 import "fmt"
 
-const _ResourceType_name = "RTPrivateKeyRTPublicKeyRTCSRRTCertificateRTLocationRTSerialRTSubject"
-
-var _ResourceType_index = [...]uint8{0, 12, 23, 28, 41, 51, 59, 68}
-
 func (i ResourceType) String() string {
-	if i >= ResourceType(len(_ResourceType_index)-1) {
+	switch i {
+	case RTPrivateKey:
+		return "private"
+	case RTPublicKey:
+		return "public"
+	case RTCSR:
+		return "csr"
+	case RTCertificate:
+		return "cert"
+	case RTSubject:
+		return "subject"
+	case RTSerial:
+		return "serial"
+	case RTLocation:
+		return "location"
+	case RTUnknown:
+		return "unknown"
+	default:
 		return fmt.Sprintf("ResourceType(%d)", i)
 	}
-	return _ResourceType_name[_ResourceType_index[i]:_ResourceType_index[i+1]]
+}
+
+func StringToResourceType(in string) (ResourceType, error) {
+	switch in {
+	case "private":
+		return RTPrivateKey, nil
+	case "public":
+		return RTPublicKey, nil
+	case "csr":
+		return RTCSR, nil
+	case "cert":
+		return RTCertificate, nil
+	case "location":
+		return RTLocation, nil
+	case "subject":
+		return RTSubject, nil
+	case "serial":
+		return RTSerial, nil
+	default:
+		return RTUnknown, fmt.Errorf("unknown resource type")
+	}
 }

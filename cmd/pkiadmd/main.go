@@ -10,15 +10,15 @@ import (
 	"github.com/gibheer/pkiadm"
 )
 
-const (
-	RTPrivateKey ResourceType = iota
-	RTPublicKey
-	RTCSR
-	RTCertificate
-	RTLocation
-	RTSerial
-	RTSubject
-)
+//const (
+//	RTPrivateKey ResourceType = iota
+//	RTPublicKey
+//	RTCSR
+//	RTCertificate
+//	RTLocation
+//	RTSerial
+//	RTSubject
+//)
 
 const (
 	ENoIDGiven      = Error("no ID given")
@@ -32,7 +32,7 @@ const (
 type (
 	Resource interface {
 		// Return the unique ResourceName
-		Name() ResourceName
+		Name() pkiadm.ResourceName
 		// AddDependency registers a depending resource to be retuened by Dependencies()
 		// Refresh must trigger a rebuild of the resource.
 		Refresh(*Storage) error
@@ -40,21 +40,22 @@ type (
 		Pem() ([]byte, error)
 		Checksum() []byte
 		// DependsOn must return the resource names it is depending on.
-		DependsOn() []ResourceName
+		DependsOn() []pkiadm.ResourceName
 	}
 
-	ResourceName struct {
-		ID   string
-		Type ResourceType
-	}
+	//	ResourceName struct {
+	//		ID   string
+	//		Type ResourceType
+	//	}
 
 	ResourceType uint
 
 	Error string
 )
 
-func (e Error) Error() string         { return string(e) }
-func (r ResourceName) String() string { return r.Type.String() + "/" + r.ID }
+func (e Error) Error() string { return string(e) }
+
+//func (r ResourceName) String() string { return r.Type.String() + "/" + r.ID }
 
 func main() {
 	os.Exit(_main())

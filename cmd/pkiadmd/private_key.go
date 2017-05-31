@@ -39,8 +39,8 @@ func NewPrivateKey(id string, pkType pkiadm.PrivateKeyType, bits uint) (*Private
 	return &pk, nil
 }
 
-func (p *PrivateKey) Name() ResourceName {
-	return ResourceName{p.ID, RTPrivateKey}
+func (p *PrivateKey) Name() pkiadm.ResourceName {
+	return pkiadm.ResourceName{p.ID, pkiadm.RTPrivateKey}
 }
 
 func (p *PrivateKey) Checksum() []byte {
@@ -51,8 +51,8 @@ func (p *PrivateKey) Pem() ([]byte, error) {
 	return p.Key, nil
 }
 
-func (p *PrivateKey) DependsOn() []ResourceName {
-	return []ResourceName{}
+func (p *PrivateKey) DependsOn() []pkiadm.ResourceName {
+	return []pkiadm.ResourceName{}
 }
 
 func (p *PrivateKey) Refresh(_ *Storage) error {
@@ -149,13 +149,13 @@ func (s *Server) CreatePrivateKey(inPk pkiadm.PrivateKey, res *pkiadm.Result) er
 		res.SetError(err, "Could not add private key '%s'", inPk.ID)
 		return nil
 	}
-	return nil
+	return s.store(res)
 }
 func (s *Server) SetPrivateKey(changeset pkiadm.PrivateKeyChange, res *pkiadm.Result) error {
 	s.lock()
 	defer s.unlock()
 
-	pk, err := s.storage.GetPrivateKey(ResourceName{ID: changeset.PrivateKey.ID, Type: RTPrivateKey})
+	pk, err := s.storage.GetPrivateKey(pkiadm.ResourceName{ID: changeset.PrivateKey.ID, Type: pkiadm.RTPrivateKey})
 	if err != nil {
 		res.SetError(err, "Could not find private key '%s'", changeset.PrivateKey.ID)
 		return nil
@@ -172,7 +172,7 @@ func (s *Server) SetPrivateKey(changeset pkiadm.PrivateKeyChange, res *pkiadm.Re
 			return nil
 		}
 	}
-	if err := s.storage.Update(ResourceName{ID: pk.ID, Type: RTPrivateKey}); err != nil {
+	if err := s.storage.Update(pkiadm.ResourceName{ID: pk.ID, Type: pkiadm.RTPrivateKey}); err != nil {
 		res.SetError(err, "Could not update private key '%s'", changeset.PrivateKey.ID)
 		return nil
 	}
@@ -182,7 +182,7 @@ func (s *Server) DeletePrivateKey(inPk pkiadm.ResourceName, res *pkiadm.Result) 
 	s.lock()
 	defer s.unlock()
 
-	pk, err := s.storage.GetPrivateKey(ResourceName{ID: inPk.ID, Type: RTPrivateKey})
+	pk, err := s.storage.GetPrivateKey(pkiadm.ResourceName{ID: inPk.ID, Type: pkiadm.RTPrivateKey})
 	if err != nil {
 		res.SetError(err, "Could not find private key '%s'", inPk.ID)
 		return nil
@@ -198,7 +198,7 @@ func (s *Server) ShowPrivateKey(inPk pkiadm.ResourceName, res *pkiadm.ResultPriv
 	s.lock()
 	defer s.unlock()
 
-	pk, err := s.storage.GetPrivateKey(ResourceName{ID: inPk.ID, Type: RTPrivateKey})
+	pk, err := s.storage.GetPrivateKey(pkiadm.ResourceName{ID: inPk.ID, Type: pkiadm.RTPrivateKey})
 	if err != nil {
 		res.Result.SetError(err, "Could not find private key '%s'", inPk.ID)
 		return nil
