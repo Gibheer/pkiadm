@@ -10,16 +10,6 @@ import (
 	"github.com/gibheer/pkiadm"
 )
 
-//const (
-//	RTPrivateKey ResourceType = iota
-//	RTPublicKey
-//	RTCSR
-//	RTCertificate
-//	RTLocation
-//	RTSerial
-//	RTSubject
-//)
-
 const (
 	ENoIDGiven      = Error("no ID given")
 	EUnknownType    = Error("unknown type found")
@@ -43,19 +33,10 @@ type (
 		DependsOn() []pkiadm.ResourceName
 	}
 
-	//	ResourceName struct {
-	//		ID   string
-	//		Type ResourceType
-	//	}
-
-	ResourceType uint
-
 	Error string
 )
 
 func (e Error) Error() string { return string(e) }
-
-//func (r ResourceName) String() string { return r.Type.String() + "/" + r.ID }
 
 func main() {
 	os.Exit(_main())
