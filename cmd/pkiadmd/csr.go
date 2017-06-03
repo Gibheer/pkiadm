@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/pem"
+	"fmt"
 	"net"
 
 	"github.com/gibheer/pki"
@@ -14,7 +15,6 @@ type (
 		ID string
 
 		// The following options are used to generate the content of the CSR.
-		CommonName     string
 		DNSNames       []string
 		EmailAddresses []string
 		IPAddresses    []net.IP
@@ -29,12 +29,11 @@ type (
 )
 
 // NewCSR creates a new CSR.
-func NewCSR(id string, pk, subject pkiadm.ResourceName, commonName string, dnsNames []string,
+func NewCSR(id string, pk, subject pkiadm.ResourceName, dnsNames []string,
 	emailAddresses []string, iPAddresses []net.IP) (*CSR, error) {
 	return &CSR{
 		ID:             id,
 		Subject:        subject,
-		CommonName:     commonName,
 		DNSNames:       dnsNames,
 		EmailAddresses: emailAddresses,
 		IPAddresses:    iPAddresses,
@@ -63,7 +62,6 @@ func (c *CSR) Refresh(lookup *Storage) error {
 		return err
 	}
 	subject := subjRes.GetName()
-	subject.CommonName = c.CommonName
 
 	opts := pki.CertificateData{
 		Subject:        subject,
@@ -101,4 +99,114 @@ func (c *CSR) GetCSR() (*pki.CertificateRequest, error) {
 		return nil, err
 	}
 	return csr, nil
+}
+
+func (s *Server) CreateCSR(inCSR pkiadm.CSR, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	csr, err := NewCSR(
+		inCSR.ID,
+		inCSR.PrivateKey,
+		inCSR.Subject,
+		inCSR.DNSNames,
+		inCSR.EmailAddresses,
+		inCSR.IPAddresses,
+	)
+	if err != nil {
+		res.SetError(err, "Could not create new private key '%s'", inCSR.ID)
+		return nil
+	}
+	if err := s.storage.AddCSR(csr); err != nil {
+		res.SetError(err, "Could not add private key '%s'", inCSR.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) SetCSR(changeset pkiadm.CSRChange, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	csr, err := s.storage.GetCSR(pkiadm.ResourceName{ID: changeset.CSR.ID, Type: pkiadm.RTCSR})
+	if err != nil {
+		res.SetError(err, "Could not find private key '%s'", changeset.CSR.ID)
+		return nil
+	}
+
+	change := changeset.CSR
+	for _, field := range changeset.FieldList {
+		switch field {
+		case "private-key":
+			csr.PrivateKey = change.PrivateKey
+		case "subject":
+			csr.Subject = change.Subject
+		case "ip":
+			csr.IPAddresses = change.IPAddresses
+		case "fqdn":
+			csr.DNSNames = change.DNSNames
+		case "mail":
+			csr.EmailAddresses = change.EmailAddresses
+		default:
+			res.SetError(fmt.Errorf("unknown field"), "unknown field '%s'", field)
+			return nil
+		}
+	}
+	if err := s.storage.Update(pkiadm.ResourceName{ID: csr.ID, Type: pkiadm.RTCSR}); err != nil {
+		res.SetError(err, "Could not update private key '%s'", changeset.CSR.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) DeleteCSR(inCSR pkiadm.ResourceName, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	csr, err := s.storage.GetCSR(pkiadm.ResourceName{ID: inCSR.ID, Type: pkiadm.RTCSR})
+	if err != nil {
+		res.SetError(err, "Could not find private key '%s'", inCSR.ID)
+		return nil
+	}
+
+	if err := s.storage.Remove(csr); err != nil {
+		res.SetError(err, "Could not remove private key '%s'", csr.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) ShowCSR(inCSR pkiadm.ResourceName, res *pkiadm.ResultCSR) error {
+	s.lock()
+	defer s.unlock()
+
+	csr, err := s.storage.GetCSR(pkiadm.ResourceName{ID: inCSR.ID, Type: pkiadm.RTCSR})
+	if err != nil {
+		res.Result.SetError(err, "Could not find private key '%s'", inCSR.ID)
+		return nil
+	}
+	res.CSRs = []pkiadm.CSR{pkiadm.CSR{
+		ID:             csr.ID,
+		Subject:        csr.Subject,
+		PrivateKey:     csr.PrivateKey,
+		EmailAddresses: csr.EmailAddresses,
+		DNSNames:       csr.DNSNames,
+		IPAddresses:    csr.IPAddresses,
+		Checksum:       csr.Checksum(),
+	}}
+	return nil
+}
+func (s *Server) ListCSR(filter pkiadm.Filter, res *pkiadm.ResultCSR) error {
+	s.lock()
+	defer s.unlock()
+
+	for _, csr := range s.storage.CSRs {
+		res.CSRs = append(res.CSRs, pkiadm.CSR{
+			ID:             csr.ID,
+			Subject:        csr.Subject,
+			PrivateKey:     csr.PrivateKey,
+			EmailAddresses: csr.EmailAddresses,
+			DNSNames:       csr.DNSNames,
+			IPAddresses:    csr.IPAddresses,
+			Checksum:       csr.Checksum(),
+		})
+	}
+	return nil
 }

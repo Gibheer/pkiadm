@@ -50,6 +50,16 @@ func main() {
 		err = setPrivateKey(args, client)
 	case `show-private`:
 		err = showPrivateKey(args, client)
+	case `create-public`:
+		err = createPublicKey(args, client)
+	case `delete-public`:
+		err = deletePublicKey(args, client)
+	case `list-public`:
+		err = listPublicKey(args, client)
+	case `set-public`:
+		err = setPublicKey(args, client)
+	case `show-public`:
+		err = showPublicKey(args, client)
 	case `create-location`:
 		err = createLocation(args, client)
 	case `delete-location`:
@@ -60,6 +70,16 @@ func main() {
 		err = setLocation(args, client)
 	case `show-location`:
 		err = showLocation(args, client)
+	case `create-csr`:
+		err = createCSR(args, client)
+	case `delete-csr`:
+		err = deleteCSR(args, client)
+	case `list-csr`:
+		err = listCSR(args, client)
+	case `set-csr`:
+		err = setCSR(args, client)
+	case `show-csr`:
+		err = showCSR(args, client)
 	default:
 		fmt.Printf("unknown subcommand '%s'\n", cmd)
 		printCommands()
