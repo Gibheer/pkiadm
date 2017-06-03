@@ -2,14 +2,9 @@ package main
 
 import (
 	"encoding/pem"
+	"fmt"
 
 	"github.com/gibheer/pkiadm"
-)
-
-const (
-	PUTRSA PublicKeyType = iota
-	PUTECDSA
-	PUTED25519
 )
 
 type (
@@ -17,11 +12,9 @@ type (
 		ID string
 
 		PrivateKey pkiadm.ResourceName
-		Type       PublicKeyType // mark the type of the public key
+		Type       pkiadm.PrivateKeyType // mark the type of the public key
 		Key        []byte
 	}
-
-	PublicKeyType uint
 )
 
 func NewPublicKey(id string, pk pkiadm.ResourceName) (*PublicKey, error) {
@@ -37,14 +30,11 @@ func (p *PublicKey) Name() pkiadm.ResourceName {
 }
 
 func (p *PublicKey) Refresh(lookup *Storage) error {
-	r, err := lookup.Get(p.PrivateKey)
+	pk, err := lookup.GetPrivateKey(p.PrivateKey)
 	if err != nil {
 		return err
 	}
-	pk, ok := r.(*PrivateKey)
-	if !ok {
-		return EUnknownType
-	}
+	p.Type = pk.PKType
 	privateKey, err := pk.GetKey()
 	if err != nil {
 		return err
@@ -71,9 +61,98 @@ func (p *PublicKey) Checksum() []byte {
 	return Hash(p.Key)
 }
 
-//func (p *PublicKey) MarshalJSON() ([]byte, error) {
-//	return json.Marshal(*p)
-//}
-//func (p *PublicKey) UnmarshalJSON(raw []byte) error {
-//	return json.Unmarshal(raw, p)
-//}
+func (s *Server) CreatePublicKey(inPub pkiadm.PublicKey, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	pub, err := NewPublicKey(inPub.ID, inPub.PrivateKey)
+	if err != nil {
+		res.SetError(err, "Could not create public key '%s'", inPub.ID)
+		return nil
+	}
+	if err := s.storage.AddPublicKey(pub); err != nil {
+		res.SetError(err, "Could not add new public key '%s'", inPub.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) SetPublicKey(inPub pkiadm.PublicKeyChange, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	pub, err := s.storage.GetPublicKey(pkiadm.ResourceName{
+		inPub.PublicKey.ID,
+		pkiadm.RTPublicKey,
+	})
+	if err != nil {
+		res.SetError(err, "Could not find public key '%s'", inPub.PublicKey.ID)
+		return nil
+	}
+	for _, field := range inPub.FieldList {
+		switch field {
+		case "private-key":
+			pub.PrivateKey = pkiadm.ResourceName{
+				inPub.PublicKey.ID,
+				pkiadm.RTPrivateKey,
+			}
+		default:
+			res.SetError(fmt.Errorf("unknown field"), "unknown field '%s'", field)
+		}
+	}
+	if err := s.storage.Update(pub.Name()); err != nil {
+		res.SetError(err, "Could not update new public key '%s'", inPub.PublicKey.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) DeletePublicKey(inPub pkiadm.PublicKey, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	pub, err := s.storage.GetPublicKey(pkiadm.ResourceName{
+		inPub.ID,
+		pkiadm.RTPublicKey,
+	})
+	if err != nil {
+		res.SetError(err, "Could not find public key '%s'", inPub.ID)
+		return nil
+	}
+	if err := s.storage.Remove(pub); err != nil {
+		res.SetError(err, "Could not remove public key '%s'", inPub.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) ShowPublicKey(inPub pkiadm.ResourceName, res *pkiadm.ResultPublicKey) error {
+	s.lock()
+	defer s.unlock()
+
+	pub, err := s.storage.GetPublicKey(inPub)
+	if err != nil {
+		res.Result.SetError(err, "Could not find public key '%s'", inPub.ID)
+		return nil
+	}
+	res.PublicKeys = []pkiadm.PublicKey{
+		pkiadm.PublicKey{
+			ID:         pub.ID,
+			PrivateKey: pub.PrivateKey,
+			Type:       pub.Type,
+			Checksum:   pub.Checksum(),
+		},
+	}
+	return nil
+}
+func (s *Server) ListPublicKey(filter pkiadm.Filter, res *pkiadm.ResultPublicKey) error {
+	s.lock()
+	defer s.unlock()
+
+	for _, pub := range s.storage.PublicKeys {
+		res.PublicKeys = append(res.PublicKeys, pkiadm.PublicKey{
+			ID:         pub.ID,
+			PrivateKey: pub.PrivateKey,
+			Type:       pub.Type,
+			Checksum:   pub.Checksum(),
+		})
+	}
+	return nil
+}
