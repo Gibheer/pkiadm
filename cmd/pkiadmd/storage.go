@@ -296,6 +296,7 @@ func (s *Storage) Remove(r Resource) error {
 		return EUnknownType
 	}
 	for _, rn := range r.DependsOn() {
+		// TODO handle refresh of dependant resources or block the deletion
 		if deps, found := s.dependencies[rn.String()]; found {
 			delete(deps, r.Name().String())
 		}
