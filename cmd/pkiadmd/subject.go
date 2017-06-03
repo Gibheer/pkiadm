@@ -96,7 +96,7 @@ func (s *Server) SetSubject(changeset pkiadm.SubjectChange, res *pkiadm.Result) 
 			return nil
 		}
 	}
-	if err := s.storage.Update(pkiadm.ResourceName{ID: subj.ID, Type: pkiadm.RTSubject}); err != nil {
+	if err := s.storage.Update(subj.Name()); err != nil {
 		res.SetError(err, "Could not update subject '%s'", changeset.Subject.ID)
 		return nil
 	}
