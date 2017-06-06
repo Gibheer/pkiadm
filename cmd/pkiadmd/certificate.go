@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/pem"
+	"fmt"
 	"time"
 
 	"github.com/gibheer/pki"
@@ -9,6 +10,10 @@ import (
 )
 
 type (
+	Signer interface {
+		Sign(*CSR) (pki.Certificate, error)
+	}
+
 	Certificate struct {
 		ID string
 
@@ -24,14 +29,14 @@ type (
 	}
 )
 
-func NewCertificate(id string, privateKey, serial, csr, ca pkiadm.ResourceName, isCA bool, duration time.Duration) (*Certificate, error) {
+func NewCertificate(id string, privateKey, serial, csr, ca pkiadm.ResourceName, selfSign bool, duration time.Duration) (*Certificate, error) {
 	return &Certificate{
 		ID:         id,
 		PrivateKey: privateKey,
 		Serial:     serial,
 		CSR:        csr,
 		CA:         ca,
-		IsCA:       isCA,
+		IsCA:       selfSign,
 		Duration:   duration,
 	}, nil
 }
@@ -127,4 +132,119 @@ func (c *Certificate) DependsOn() []pkiadm.ResourceName {
 		res = append(res, c.CA)
 	}
 	return res
+}
+
+func (s *Server) CreateCertificate(inCert pkiadm.Certificate, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	cert, err := NewCertificate(
+		inCert.ID,
+		inCert.PrivateKey,
+		inCert.Serial,
+		inCert.CSR,
+		inCert.CA,
+		inCert.IsCA,
+		inCert.Duration,
+	)
+	if err != nil {
+		res.SetError(err, "Could not create new certificate '%s'", inCert.ID)
+		return nil
+	}
+	if err := s.storage.AddCertificate(cert); err != nil {
+		res.SetError(err, "Could not add certificate '%s'", inCert.ID)
+		return nil
+	}
+	return s.store(res)
+}
+
+func (s *Server) SetCertificate(changeset pkiadm.CertificateChange, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	cert, err := s.storage.GetCertificate(pkiadm.ResourceName{ID: changeset.Certificate.ID, Type: pkiadm.RTCertificate})
+	if err != nil {
+		res.SetError(err, "Could not find certficate '%s'", changeset.Certificate.ID)
+		return nil
+	}
+
+	change := changeset.Certificate
+	for _, field := range changeset.FieldList {
+		switch field {
+		case "duration":
+			cert.Duration = change.Duration
+		case "private":
+			cert.PrivateKey = change.PrivateKey
+		case "csr":
+			cert.CSR = change.CSR
+		case "serial":
+			cert.Serial = change.Serial
+		case "ca":
+			cert.CA = change.CA
+		case "self-sign":
+			cert.IsCA = change.IsCA
+		default:
+			res.SetError(fmt.Errorf("unknown field"), "unknown field '%s'", field)
+			return nil
+		}
+	}
+	if err := s.storage.Update(cert.Name()); err != nil {
+		res.SetError(err, "Could not update certificate '%s'", changeset.Certificate.ID)
+		return nil
+	}
+	return s.store(res)
+}
+
+func (s *Server) DeleteCertificate(inCert pkiadm.ResourceName, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	cert, err := s.storage.GetCertificate(pkiadm.ResourceName{ID: inCert.ID, Type: pkiadm.RTCertificate})
+	if err != nil {
+		res.SetError(err, "Could not find certificate '%s'", inCert.ID)
+		return nil
+	}
+
+	if err := s.storage.Remove(cert); err != nil {
+		res.SetError(err, "Could not remove certificate '%s'", cert.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) ShowCertificate(inCert pkiadm.ResourceName, res *pkiadm.ResultCertificate) error {
+	s.lock()
+	defer s.unlock()
+
+	cert, err := s.storage.GetCertificate(pkiadm.ResourceName{ID: inCert.ID, Type: pkiadm.RTCertificate})
+	if err != nil {
+		res.Result.SetError(err, "Could not find certificate '%s'", inCert.ID)
+		return nil
+	}
+	res.Certificates = []pkiadm.Certificate{pkiadm.Certificate{
+		ID:         cert.ID,
+		Duration:   cert.Duration,
+		PrivateKey: cert.PrivateKey,
+		Serial:     cert.Serial,
+		CA:         cert.CA,
+		CSR:        cert.CSR,
+		Checksum:   cert.Checksum(),
+	}}
+	return nil
+}
+func (s *Server) ListCertificate(filter pkiadm.Filter, res *pkiadm.ResultCertificate) error {
+	s.lock()
+	defer s.unlock()
+
+	for _, cert := range s.storage.Certificates {
+		res.Certificates = append(res.Certificates, pkiadm.Certificate{
+			ID:         cert.ID,
+			Duration:   cert.Duration,
+			PrivateKey: cert.PrivateKey,
+			Serial:     cert.Serial,
+			CA:         cert.CA,
+			CSR:        cert.CSR,
+			Checksum:   cert.Checksum(),
+		})
+	}
+	return nil
 }
