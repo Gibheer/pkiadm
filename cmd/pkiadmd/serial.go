@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 
 	"github.com/gibheer/pkiadm"
@@ -50,9 +51,102 @@ func (s *Serial) DependsOn() []pkiadm.ResourceName { return []pkiadm.ResourceNam
 // Generate generates a new serial number and stores it to avoid double
 // assigning.
 func (s *Serial) Generate() (*big.Int, error) {
-	val, err := rand.Int(rand.Reader, big.NewInt(s.Max-s.Min))
-	if err != nil {
-		return big.NewInt(-1), err
+	for {
+		val, err := rand.Int(rand.Reader, big.NewInt(s.Max-s.Min))
+		if err != nil {
+			return big.NewInt(-1), err
+		}
+		if _, found := s.UsedIDs[val.Int64()]; !found {
+			s.UsedIDs[val.Int64()] = true
+			return big.NewInt(val.Int64() + s.Min), nil
+		}
 	}
-	return big.NewInt(val.Int64() + s.Min), nil
+}
+
+func (s *Server) CreateSerial(inSer pkiadm.Serial, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	ser, err := NewSerial(inSer.ID, inSer.Min, inSer.Max)
+	if err != nil {
+		res.SetError(err, "Could not create new serial '%s'", inSer.ID)
+		return nil
+	}
+	if err := s.storage.AddSerial(ser); err != nil {
+		res.SetError(err, "Could not add serial '%s'", inSer.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) SetSerial(changeset pkiadm.SerialChange, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	ser, err := s.storage.GetSerial(pkiadm.ResourceName{ID: changeset.Serial.ID, Type: pkiadm.RTSerial})
+	if err != nil {
+		res.SetError(err, "Could not find serial '%s'", changeset.Serial.ID)
+		return nil
+	}
+
+	for _, field := range changeset.FieldList {
+		switch field {
+		case "min":
+			ser.Min = changeset.Serial.Min
+		case "max":
+			ser.Max = changeset.Serial.Max
+		default:
+			res.SetError(fmt.Errorf("unknown field"), "unknown field '%s'", field)
+			return nil
+		}
+	}
+	if err := s.storage.Update(pkiadm.ResourceName{ID: ser.ID, Type: pkiadm.RTSerial}); err != nil {
+		res.SetError(err, "Could not update serial '%s'", changeset.Serial.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) DeleteSerial(inSer pkiadm.ResourceName, res *pkiadm.Result) error {
+	s.lock()
+	defer s.unlock()
+
+	ser, err := s.storage.GetSerial(pkiadm.ResourceName{ID: inSer.ID, Type: pkiadm.RTSerial})
+	if err != nil {
+		res.SetError(err, "Could not find serial '%s'", inSer.ID)
+		return nil
+	}
+
+	if err := s.storage.Remove(ser); err != nil {
+		res.SetError(err, "Could not remove serial '%s'", ser.ID)
+		return nil
+	}
+	return s.store(res)
+}
+func (s *Server) ShowSerial(inSer pkiadm.ResourceName, res *pkiadm.ResultSerial) error {
+	s.lock()
+	defer s.unlock()
+
+	ser, err := s.storage.GetSerial(pkiadm.ResourceName{ID: inSer.ID, Type: pkiadm.RTSerial})
+	if err != nil {
+		res.Result.SetError(err, "Could not find serial '%s'", inSer.ID)
+		return nil
+	}
+	res.Serials = []pkiadm.Serial{pkiadm.Serial{
+		ID:  ser.ID,
+		Min: ser.Min,
+		Max: ser.Max,
+	}}
+	return nil
+}
+func (s *Server) ListSerial(filter pkiadm.Filter, res *pkiadm.ResultSerial) error {
+	s.lock()
+	defer s.unlock()
+
+	for _, ser := range s.storage.Serials {
+		res.Serials = append(res.Serials, pkiadm.Serial{
+			ID:  ser.ID,
+			Min: ser.Min,
+			Max: ser.Max,
+		})
+	}
+	return nil
 }
