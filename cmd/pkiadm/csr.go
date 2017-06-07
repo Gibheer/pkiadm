@@ -25,7 +25,7 @@ FQDNs, mail addresses and ips can be set multiple times or once as a comma separ
 	}
 	csr := pkiadm.CSR{}
 	fs.StringVar(&csr.ID, "id", "", "set the unique id for the new private key")
-	parseSubject(fs, args, &csr)
+	parseCSRArgs(fs, args, &csr)
 
 	if err := client.CreateCSR(csr); err != nil {
 		return errors.Wrap(err, "could not create private key")
@@ -37,7 +37,7 @@ func setCSR(args []string, client *pkiadm.Client) error {
 	fs := flag.NewFlagSet("set-csr", flag.ExitOnError)
 	csr := pkiadm.CSR{}
 	fs.StringVar(&csr.ID, "id", "", "set the id of the CSR to adjust")
-	parseSubject(fs, args, &csr)
+	parseCSRArgs(fs, args, &csr)
 
 	fieldList := []string{}
 	for _, field := range []string{"private-key", "subject", "ip", "fqdn", "mail"} {
@@ -52,7 +52,7 @@ func setCSR(args []string, client *pkiadm.Client) error {
 	}
 	return nil
 }
-func parseSubject(fs *flag.FlagSet, args []string, csr *pkiadm.CSR) {
+func parseCSRArgs(fs *flag.FlagSet, args []string, csr *pkiadm.CSR) {
 	fs.StringSliceVar(&csr.DNSNames, "fqdn", []string{}, "assign the FQDNs")
 	fs.StringSliceVar(&csr.EmailAddresses, "mail", []string{}, "assign the mail addresses")
 	fs.IPSliceVar(&csr.IPAddresses, "ip", []net.IP{}, "assign the ips")
