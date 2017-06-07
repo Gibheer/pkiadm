@@ -49,3 +49,19 @@ type ResourceType uint
 func (r ResourceName) String() string { return r.Type.String() + "/" + r.ID }
 
 type Filter struct{}
+
+type ResultResource struct {
+	Result    Result
+	Resources []ResourceName
+}
+
+func (c *Client) List() ([]ResourceName, error) {
+	result := ResultResource{}
+	if err := c.query("List", Filter{}, &result); err != nil {
+		return []ResourceName{}, err
+	}
+	if result.Result.HasError {
+		return []ResourceName{}, result.Result.Error
+	}
+	return result.Resources, nil
+}

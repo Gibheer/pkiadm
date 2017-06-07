@@ -31,3 +31,28 @@ func (s *Server) store(res *pkiadm.Result) error {
 	}
 	return nil
 }
+
+func (s *Server) List(filter pkiadm.Filter, result *pkiadm.ResultResource) error {
+	for _, res := range s.storage.PrivateKeys {
+		result.Resources = append(result.Resources, res.Name())
+	}
+	for _, res := range s.storage.PublicKeys {
+		result.Resources = append(result.Resources, res.Name())
+	}
+	for _, res := range s.storage.Locations {
+		result.Resources = append(result.Resources, res.Name())
+	}
+	for _, res := range s.storage.Certificates {
+		result.Resources = append(result.Resources, res.Name())
+	}
+	for _, res := range s.storage.CSRs {
+		result.Resources = append(result.Resources, res.Name())
+	}
+	for _, res := range s.storage.Serials {
+		result.Resources = append(result.Resources, res.Name())
+	}
+	for _, res := range s.storage.Subjects {
+		result.Resources = append(result.Resources, res.Name())
+	}
+	return nil
+}

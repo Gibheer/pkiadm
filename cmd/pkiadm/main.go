@@ -6,6 +6,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/gibheer/pkiadm"
+	flag "github.com/spf13/pflag"
 )
 
 func main() {
@@ -30,6 +31,18 @@ func main() {
 	cmd := os.Args[1]
 	args := os.Args[2:]
 	switch cmd {
+	case `list`:
+		err = list(args, client)
+	case `create-serial`:
+		err = createSerial(args, client)
+	case `delete-serial`:
+		err = deleteSerial(args, client)
+	case `list-serial`:
+		err = listSerial(args, client)
+	case `set-serial`:
+		err = setSerial(args, client)
+	case `show-serial`:
+		err = showSerial(args, client)
 	case `create-subj`:
 		err = createSubject(args, client)
 	case `delete-subj`:
@@ -80,6 +93,16 @@ func main() {
 		err = setCSR(args, client)
 	case `show-csr`:
 		err = showCSR(args, client)
+	case `create-cert`:
+		err = createCertificate(args, client)
+	case `delete-cert`:
+		err = deleteCertificate(args, client)
+	case `list-cert`:
+		err = listCertificate(args, client)
+	case `set-cert`:
+		err = setCertificate(args, client)
+	case `show-cert`:
+		err = showCertificate(args, client)
 	default:
 		fmt.Printf("unknown subcommand '%s'\n", cmd)
 		printCommands()
@@ -95,16 +118,63 @@ func printCommands() {
 	fmt.Println(`Usage: pkiadm <subcommand> [options]
 where subcommand is one of:`)
 	out := tabwriter.NewWriter(os.Stdout, 0, 4, 1, ' ', 0)
-	fmt.Fprintf(out, "  %s\t%s\n", "def-list", "list all registered definitions")
-	fmt.Fprintf(out, "  %s\t%s\n", "create-file", "create a new file export")
-	fmt.Fprintf(out, "  %s\t%s\n", "list-files", "list all file exports")
-	fmt.Fprintf(out, "  %s\t%s\n", "delete-file", "delete a file export from the database and os")
-	fmt.Fprintf(out, "  %s\t%s\n", "create-private-key", "create a new private key")
-	fmt.Fprintf(out, "  %s\t%s\n", "list-private-keys", "list all private keys")
-	fmt.Fprintf(out, "  %s\t%s\n", "get-private-key", "get information on a specific private key")
-	fmt.Fprintf(out, "  %s\t%s\n", "delete-private-key", "delete a specific private key")
-	fmt.Fprintf(out, "  %s\t%s\n", "create-public-key", "create a new public key")
-	fmt.Fprintf(out, "  %s\t%s\n", "list-public-keys", "list all public keys")
-	fmt.Fprintf(out, "  %s\t%s\n", "delete-public-key", "delete a specific public key")
+	fmt.Fprintf(out, "  %s\t%s\n", "create-cert", "create a new certificate")
+	fmt.Fprintf(out, "  %s\t%s\n", "create-csr", "create a new certificate sign request")
+	fmt.Fprintf(out, "  %s\t%s\n", "create-location", "create a new file export")
+	fmt.Fprintf(out, "  %s\t%s\n", "create-private", "create a new private key")
+	fmt.Fprintf(out, "  %s\t%s\n", "create-public", "create a new public key")
+	fmt.Fprintf(out, "  %s\t%s\n", "create-serial", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "create-subj", "")
+
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-cert", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-csr", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-location", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-private", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-public", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-serial", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-subj", "")
+
+	fmt.Fprintf(out, "  %s\t%s\n", "list", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-cert", "list all available certificates")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-csr", "list all available certificate sign requests")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-location", "list all file exports")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-private", "list all private keys")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-public", "list all public keys")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-serial", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-subj", "")
+
+	fmt.Fprintf(out, "  %s\t%s\n", "set-cert", "change attributes of a certificate")
+	fmt.Fprintf(out, "  %s\t%s\n", "set-csr", "change attributes of a certificate sign request")
+	fmt.Fprintf(out, "  %s\t%s\n", "set-location", "change attributes of a location")
+	fmt.Fprintf(out, "  %s\t%s\n", "set-private", "change attributes of a private key")
+	fmt.Fprintf(out, "  %s\t%s\n", "set-public", "change attributes of a public key")
+	fmt.Fprintf(out, "  %s\t%s\n", "set-serial", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "set-subj", "")
+
+	fmt.Fprintf(out, "  %s\t%s\n", "show-cert", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "show-csr", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "show-location", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "show-private", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "show-public", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "show-serial", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "show-subj", "")
+
 	out.Flush()
+}
+
+func list(args []string, c *pkiadm.Client) error {
+	fs := flag.NewFlagSet("pkiadm list", flag.ExitOnError)
+	fs.Parse(args)
+
+	resources, err := c.List()
+	if err != nil {
+		return err
+	}
+	out := tabwriter.NewWriter(os.Stdout, 0, 4, 1, ' ', 0)
+	fmt.Fprintf(out, "%s\t%s\t\n", "type", "id")
+	for _, res := range resources {
+		fmt.Fprintf(out, "%s\t%s\t\n", res.Type, res.ID)
+	}
+	out.Flush()
+	return nil
 }
