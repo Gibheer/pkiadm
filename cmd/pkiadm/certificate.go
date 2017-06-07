@@ -51,12 +51,12 @@ func setCertificate(args []string, client *pkiadm.Client) error {
 	return nil
 }
 func parseCertificateArgs(fs *flag.FlagSet, args []string, cert *pkiadm.Certificate) {
-	pk := flag.String("private", "", "the private key id to sign the certificate sign request")
-	csr := flag.String("csr", "", "the CSR to sign to get the resulting certificate")
-	ca := flag.String("ca", "", "the certificate to use to sign the certificate sign request")
-	serial := flag.String("serial", "", "the serial generator used to fetch a serial")
-	flag.DurationVar(&cert.Duration, "duration", time.Duration(1461190656), "the time the certificate is valid (in h, m, s)") // these are 360 days
-	flag.BoolVar(&cert.IsCA, "self-sign", false, "set this to true to create a self signed certificate (for CA usage)")
+	pk := fs.String("private", "", "the private key id to sign the certificate sign request")
+	csr := fs.String("csr", "", "the CSR to sign to get the resulting certificate")
+	ca := fs.String("ca", "", "the certificate to use to sign the certificate sign request")
+	serial := fs.String("serial", "", "the serial generator used to fetch a serial")
+	fs.DurationVar(&cert.Duration, "duration", 360*24*time.Hour, "the time the certificate is valid (in h, m, s)") // these are 360 days
+	fs.BoolVar(&cert.IsCA, "self-sign", false, "set this to true to create a self signed certificate (for CA usage)")
 	fs.Parse(args)
 
 	cert.PrivateKey = pkiadm.ResourceName{*pk, pkiadm.RTPrivateKey}
@@ -106,14 +106,14 @@ func showCertificate(args []string, client *pkiadm.Client) error {
 		return err
 	}
 	out := tabwriter.NewWriter(os.Stdout, 2, 2, 1, ' ', tabwriter.AlignRight)
-	fmt.Fprintf(out, "id:\t%s\t\n", cert.ID)
-	fmt.Fprintf(out, "private:\t%s\t\n", cert.PrivateKey.ID)
-	fmt.Fprintf(out, "csr:\t%s\t\n", cert.CSR.ID)
-	fmt.Fprintf(out, "ca:\t%s\t\n", cert.CA.ID)
-	fmt.Fprintf(out, "serial:\t%s\t\n", cert.Serial.ID)
-	fmt.Fprintf(out, "duration:\t%s\t\n", cert.Duration)
-	fmt.Fprintf(out, "self-signed:\t%s\t\n", cert.IsCA)
-	fmt.Fprintf(out, "checksum:\t%s\t\n", base64.StdEncoding.EncodeToString(cert.Checksum))
+	fmt.Fprintf(out, "id:\t%s\n", cert.ID)
+	fmt.Fprintf(out, "private:\t%s\n", cert.PrivateKey.ID)
+	fmt.Fprintf(out, "csr:\t%s\n", cert.CSR.ID)
+	fmt.Fprintf(out, "ca:\t%s\n", cert.CA.ID)
+	fmt.Fprintf(out, "serial:\t%s\n", cert.Serial.ID)
+	fmt.Fprintf(out, "duration:\t%s\n", cert.Duration)
+	fmt.Fprintf(out, "self-signed:\t%t\n", cert.IsCA)
+	fmt.Fprintf(out, "checksum:\t%s\n", base64.StdEncoding.EncodeToString(cert.Checksum))
 	out.Flush()
 	return nil
 }
