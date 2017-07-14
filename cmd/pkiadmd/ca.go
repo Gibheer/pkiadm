@@ -1,7 +1,15 @@
 package main
 
 import (
+	"github.com/gibheer/pki"
 	"github.com/gibheer/pkiadm"
+)
+
+var (
+	CASelfSign = &CA{
+		ID:   "self-sign",
+		Type: pkiadm.CALocal,
+	}
 )
 
 type (
@@ -24,6 +32,28 @@ func NewCA(id string, caType pkiadm.CAType, cert pkiadm.ResourceName) (*CA, erro
 	return ca, nil
 }
 
+// Sign the certificate sign request with this CA
+func (ca *CA) Sign(lookup *Storage, csr *pki.CertificateRequest, opts pki.CertificateOptions) (*pki.Certificate, error) {
+	caCertDef, err := lookup.GetCertificate(ca.Certificate)
+	if err != nil {
+		return nil, err
+	}
+	caCert, err := caCertDef.GetCertificate()
+	if err != nil {
+		return nil, err
+	}
+	pkDef, err := lookup.GetPrivateKey(caCertDef.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	pk, err := pkDef.GetKey()
+	if err != nil {
+		return nil, err
+	}
+
+	return csr.ToCertificate(pk, opts, caCert)
+}
+
 // Return the unique ResourceName
 func (ca *CA) Name() pkiadm.ResourceName {
 	return pkiadm.ResourceName{ca.ID, pkiadm.RTCA}
@@ -44,10 +74,6 @@ func (ca *CA) DependsOn() []pkiadm.ResourceName {
 	return []pkiadm.ResourceName{
 		ca.Certificate,
 	}
-}
-
-func (ca *CA) Sign(csr *CSR) (*Certificate, error) {
-	return nil, nil
 }
 
 func (s *Server) CreateCA(inCA pkiadm.CA, res *pkiadm.Result) error {

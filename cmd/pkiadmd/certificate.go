@@ -49,13 +49,10 @@ func (c *Certificate) Name() pkiadm.ResourceName {
 // AddDependency registers a depending resource to be retuened by Dependencies()
 // Refresh must trigger a rebuild of the resource.
 func (c *Certificate) Refresh(lookup *Storage) error {
-	var ca *pki.Certificate
+	var err error
+	ca := CASelfSign
 	if !c.IsCA {
-		cert, err := lookup.GetCertificate(c.CA)
-		if err != nil {
-			return err
-		}
-		ca, err = cert.GetCertificate()
+		ca, err = lookup.GetCA(c.CA)
 		if err != nil {
 			return err
 		}
@@ -65,14 +62,6 @@ func (c *Certificate) Refresh(lookup *Storage) error {
 		return err
 	}
 	csr, err := csrRes.GetCSR()
-	if err != nil {
-		return err
-	}
-	pkRes, err := lookup.GetPrivateKey(c.PrivateKey)
-	if err != nil {
-		return err
-	}
-	pk, err := pkRes.GetKey()
 	if err != nil {
 		return err
 	}
@@ -94,7 +83,8 @@ func (c *Certificate) Refresh(lookup *Storage) error {
 		IsCA:         c.IsCA,
 		CALength:     0, // TODO make this an option
 	}
-	cert, err := csr.ToCertificate(pk, opts, ca)
+	//cert, err := csr.ToCertificate(pk, opts, ca)
+	cert, err := ca.Sign(lookup, csr, opts)
 	if err != nil {
 		return err
 	}

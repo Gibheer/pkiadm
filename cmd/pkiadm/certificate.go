@@ -61,7 +61,7 @@ func parseCertificateArgs(fs *flag.FlagSet, args []string, cert *pkiadm.Certific
 
 	cert.PrivateKey = pkiadm.ResourceName{*pk, pkiadm.RTPrivateKey}
 	cert.CSR = pkiadm.ResourceName{*csr, pkiadm.RTCSR}
-	cert.CA = pkiadm.ResourceName{*ca, pkiadm.RTCertificate}
+	cert.CA = pkiadm.ResourceName{*ca, pkiadm.RTCA}
 	cert.Serial = pkiadm.ResourceName{*serial, pkiadm.RTSerial}
 }
 
