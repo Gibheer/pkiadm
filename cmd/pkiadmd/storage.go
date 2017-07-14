@@ -24,6 +24,7 @@ type (
 		CSRs         map[string]*CSR
 		Serials      map[string]*Serial
 		Subjects     map[string]*Subject
+		CAs          map[string]*CA
 		// dependencies maps from a resource name to all resources which depend
 		// on it.
 		dependencies map[string]map[string]Resource
@@ -42,6 +43,7 @@ func NewStorage(path string) (*Storage, error) {
 		CSRs:         map[string]*CSR{},
 		Serials:      map[string]*Serial{},
 		Subjects:     map[string]*Subject{},
+		CAs:          map[string]*CA{},
 		dependencies: map[string]map[string]Resource{},
 	}
 	if err := s.load(); err != nil {
@@ -92,6 +94,9 @@ func (s *Storage) refreshDependencies() error {
 	}
 	for _, l := range s.Locations {
 		_ = s.addDependency(l)
+	}
+	for _, ca := range s.CAs {
+		_ = s.addDependency(ca)
 	}
 	return nil
 }
@@ -193,6 +198,14 @@ func (s *Storage) AddLocation(l *Location) error {
 	return s.addDependency(l)
 }
 
+func (s *Storage) AddCA(ca *CA) error {
+	if err := ca.Refresh(s); err != nil {
+		return err
+	}
+	s.CAs[ca.Name().ID] = ca
+	return s.addDependency(ca)
+}
+
 // Get figures out the resource to the ResourceName if available.
 func (s *Storage) Get(r pkiadm.ResourceName) (Resource, error) {
 	if r.ID == "" {
@@ -213,6 +226,8 @@ func (s *Storage) Get(r pkiadm.ResourceName) (Resource, error) {
 		return s.GetCertificate(r)
 	case pkiadm.RTLocation:
 		return s.GetLocation(r)
+	case pkiadm.RTCA:
+		return s.GetCA(r)
 	default:
 		return nil, EUnknownType
 	}
@@ -274,6 +289,14 @@ func (s *Storage) GetLocation(r pkiadm.ResourceName) (*Location, error) {
 	return nil, errors.Wrapf(ENotFound, "no location with id '%s' found", r)
 }
 
+// GetCA returns the CA matching the resource name.
+func (s *Storage) GetCA(r pkiadm.ResourceName) (*CA, error) {
+	if res, found := s.CAs[r.ID]; found {
+		return res, nil
+	}
+	return nil, errors.Wrapf(ENotFound, "no CA with id '%s' found", r)
+}
+
 // Remove takes a resource and removes it from the system.
 func (s *Storage) Remove(r Resource) error {
 	// TODO implement unable to remove when having dependencies
@@ -292,6 +315,8 @@ func (s *Storage) Remove(r Resource) error {
 		delete(s.Certificates, r.Name().ID)
 	case pkiadm.RTLocation:
 		delete(s.Locations, r.Name().ID)
+	case pkiadm.RTCA:
+		delete(s.CAs, r.Name().ID)
 	default:
 		return EUnknownType
 	}

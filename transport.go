@@ -38,6 +38,7 @@ const (
 	RTSerial
 	RTSubject
 	RTUnknown
+	RTCA
 )
 
 type ResourceName struct {

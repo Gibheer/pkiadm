@@ -43,6 +43,16 @@ func main() {
 		err = setSerial(args, client)
 	case `show-serial`:
 		err = showSerial(args, client)
+	case `create-ca`:
+		err = createCA(args, client)
+	case `delete-ca`:
+		err = deleteCA(args, client)
+	case `list-ca`:
+		err = listCA(args, client)
+	case `set-ca`:
+		err = setCA(args, client)
+	case `show-ca`:
+		err = showCA(args, client)
 	case `create-subj`:
 		err = createSubject(args, client)
 	case `delete-subj`:
@@ -118,6 +128,7 @@ func printCommands() {
 	fmt.Println(`Usage: pkiadm <subcommand> [options]
 where subcommand is one of:`)
 	out := tabwriter.NewWriter(os.Stdout, 0, 4, 1, ' ', 0)
+	fmt.Fprintf(out, "  %s\t%s\n", "create-ca", "create a new CA")
 	fmt.Fprintf(out, "  %s\t%s\n", "create-cert", "create a new certificate")
 	fmt.Fprintf(out, "  %s\t%s\n", "create-csr", "create a new certificate sign request")
 	fmt.Fprintf(out, "  %s\t%s\n", "create-location", "create a new file export")
@@ -126,6 +137,7 @@ where subcommand is one of:`)
 	fmt.Fprintf(out, "  %s\t%s\n", "create-serial", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "create-subj", "")
 
+	fmt.Fprintf(out, "  %s\t%s\n", "delete-ca", "delete a CA")
 	fmt.Fprintf(out, "  %s\t%s\n", "delete-cert", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "delete-csr", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "delete-location", "")
@@ -135,6 +147,7 @@ where subcommand is one of:`)
 	fmt.Fprintf(out, "  %s\t%s\n", "delete-subj", "")
 
 	fmt.Fprintf(out, "  %s\t%s\n", "list", "")
+	fmt.Fprintf(out, "  %s\t%s\n", "list-ca", "list all available CAs")
 	fmt.Fprintf(out, "  %s\t%s\n", "list-cert", "list all available certificates")
 	fmt.Fprintf(out, "  %s\t%s\n", "list-csr", "list all available certificate sign requests")
 	fmt.Fprintf(out, "  %s\t%s\n", "list-location", "list all file exports")
@@ -143,6 +156,7 @@ where subcommand is one of:`)
 	fmt.Fprintf(out, "  %s\t%s\n", "list-serial", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "list-subj", "")
 
+	fmt.Fprintf(out, "  %s\t%s\n", "set-ca", "change attributes of a CA")
 	fmt.Fprintf(out, "  %s\t%s\n", "set-cert", "change attributes of a certificate")
 	fmt.Fprintf(out, "  %s\t%s\n", "set-csr", "change attributes of a certificate sign request")
 	fmt.Fprintf(out, "  %s\t%s\n", "set-location", "change attributes of a location")
@@ -151,6 +165,7 @@ where subcommand is one of:`)
 	fmt.Fprintf(out, "  %s\t%s\n", "set-serial", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "set-subj", "")
 
+	fmt.Fprintf(out, "  %s\t%s\n", "show-ca", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "show-cert", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "show-csr", "")
 	fmt.Fprintf(out, "  %s\t%s\n", "show-location", "")
