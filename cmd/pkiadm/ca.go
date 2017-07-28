@@ -32,16 +32,25 @@ func createCA(args []string, client *pkiadm.Client) error {
 func setCA(args []string, client *pkiadm.Client) error {
 	fs := flag.NewFlagSet("pkiadm set-public", flag.ExitOnError)
 	id := fs.String("id", "", "the id of the CA to change")
-	pk := fs.String("private-key", "", "the id of the new private key to use for CA generation")
+	ct := fs.String("type", "local", "the type of CA to create (local, LetsEncrypt)")
+	cert := fs.String("certificate", "", "the id of the certificate to use for signing")
 	fs.Parse(args)
 
-	if !fs.Lookup("private-key").Changed {
-		return nil
+	fieldList := []string{}
+	for _, field := range []string{"certificate", "type"} {
+		flag := fs.Lookup(field)
+		if flag.Changed {
+			fieldList = append(fieldList, field)
+		}
 	}
-	caName := pkiadm.ResourceName{ID: *pk, Type: pkiadm.RTPrivateKey}
+	caType := pkiadm.StringToCAType(*ct)
+	if caType == pkiadm.CAUnknown {
+		return errors.New("unknown ca type")
+	}
+	caName := pkiadm.ResourceName{ID: *cert, Type: pkiadm.RTCertificate}
 	if err := client.SetCA(
 		pkiadm.CA{ID: *id, Certificate: caName},
-		[]string{"private-key"},
+		fieldList,
 	); err != nil {
 		return errors.Wrap(err, "Could not change CA")
 	}

@@ -88,9 +88,9 @@ func listCertificate(args []string, client *pkiadm.Client) error {
 		return nil
 	}
 	out := tabwriter.NewWriter(os.Stdout, 2, 2, 1, ' ', tabwriter.AlignRight)
-	fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t\n", "id", "private", "csr", "ca", "serial", "duration", "self-signed")
+	fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t\n", "id", "private", "csr", "ca", "serial", "created", "duration", "self-signed")
 	for _, cert := range certs {
-		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%t\t\n", cert.ID, cert.PrivateKey.ID, cert.CSR.ID, cert.CA.ID, cert.Serial.ID, cert.Duration, cert.IsCA)
+		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%t\t\n", cert.ID, cert.PrivateKey.ID, cert.CSR.ID, cert.CA.ID, cert.Serial.ID, cert.Created, cert.Duration, cert.IsCA)
 	}
 	out.Flush()
 
@@ -111,6 +111,7 @@ func showCertificate(args []string, client *pkiadm.Client) error {
 	fmt.Fprintf(out, "csr:\t%s\n", cert.CSR.ID)
 	fmt.Fprintf(out, "ca:\t%s\n", cert.CA.ID)
 	fmt.Fprintf(out, "serial:\t%s\n", cert.Serial.ID)
+	fmt.Fprintf(out, "created:\t%s\n", cert.Created)
 	fmt.Fprintf(out, "duration:\t%s\n", cert.Duration)
 	fmt.Fprintf(out, "self-signed:\t%t\n", cert.IsCA)
 	fmt.Fprintf(out, "checksum:\t%s\n", base64.StdEncoding.EncodeToString(cert.Checksum))

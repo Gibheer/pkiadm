@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 
@@ -59,15 +60,19 @@ func (l *Location) Refresh(lookup *Storage) error {
 		raw = append(raw, output...)
 	}
 	if l.PreCommand != "" {
+		log.Printf("location '%s' is updating '%s' - pre '%s'", l.ID, l.Path, l.PreCommand)
 		cmd := exec.Command(l.PreCommand, l.Path)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
 	}
+	log.Printf("location '%s' is updating '%s'", l.ID, l.Path)
 	if err := ioutil.WriteFile(l.Path, raw, 0600); err != nil {
+		log.Printf("could not write location '%s': %s", l.ID, err)
 		return err
 	}
 	if l.PostCommand != "" {
+		log.Printf("location '%s' is updating '%s' - post '%s'", l.ID, l.Path, l.PostCommand)
 		cmd := exec.Command(l.PostCommand, l.Path)
 		if err := cmd.Run(); err != nil {
 			return err
@@ -132,6 +137,7 @@ func (s *Server) SetLocation(changeset pkiadm.LocationChange, res *pkiadm.Result
 		}
 	}
 	if err := s.storage.Update(locName); err != nil {
+		log.Printf("could not update location '%s': %s", loc.ID, err)
 		res.SetError(err, "Could not update location '%s'", loc.ID)
 		return nil
 	}

@@ -19,6 +19,7 @@ type (
 
 		IsCA     bool
 		Duration time.Duration
+		Created  time.Time
 
 		PrivateKey pkiadm.ResourceName
 		Serial     pkiadm.ResourceName
@@ -57,14 +58,6 @@ func (c *Certificate) Refresh(lookup *Storage) error {
 			return err
 		}
 	}
-	csrRes, err := lookup.GetCSR(c.CSR)
-	if err != nil {
-		return err
-	}
-	csr, err := csrRes.GetCSR()
-	if err != nil {
-		return err
-	}
 	serRes, err := lookup.GetSerial(c.Serial)
 	if err != nil {
 		return err
@@ -84,7 +77,7 @@ func (c *Certificate) Refresh(lookup *Storage) error {
 		CALength:     0, // TODO make this an option
 	}
 	//cert, err := csr.ToCertificate(pk, opts, ca)
-	cert, err := ca.Sign(lookup, csr, opts)
+	cert, err := ca.Sign(lookup, c.CSR, opts)
 	if err != nil {
 		return err
 	}
@@ -92,8 +85,8 @@ func (c *Certificate) Refresh(lookup *Storage) error {
 	if err != nil {
 		return err
 	}
-	block.Headers = map[string]string{"ID": c.ID}
 	c.Data = pem.EncodeToMemory(&block)
+	c.Created = time.Now()
 	return nil
 }
 
@@ -213,6 +206,7 @@ func (s *Server) ShowCertificate(inCert pkiadm.ResourceName, res *pkiadm.ResultC
 	res.Certificates = []pkiadm.Certificate{pkiadm.Certificate{
 		ID:         cert.ID,
 		Duration:   cert.Duration,
+		Created:    cert.Created,
 		PrivateKey: cert.PrivateKey,
 		Serial:     cert.Serial,
 		CA:         cert.CA,
@@ -229,6 +223,7 @@ func (s *Server) ListCertificate(filter pkiadm.Filter, res *pkiadm.ResultCertifi
 		res.Certificates = append(res.Certificates, pkiadm.Certificate{
 			ID:         cert.ID,
 			Duration:   cert.Duration,
+			Created:    cert.Created,
 			PrivateKey: cert.PrivateKey,
 			Serial:     cert.Serial,
 			CA:         cert.CA,

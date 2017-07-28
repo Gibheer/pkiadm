@@ -20,6 +20,8 @@ func (i ResourceType) String() string {
 		return "serial"
 	case RTLocation:
 		return "location"
+	case RTCA:
+		return "CA"
 	case RTUnknown:
 		return "unknown"
 	default:
@@ -43,6 +45,8 @@ func StringToResourceType(in string) (ResourceType, error) {
 		return RTSubject, nil
 	case "serial":
 		return RTSerial, nil
+	case "ca":
+		return RTCA, nil
 	default:
 		return RTUnknown, fmt.Errorf("unknown resource type")
 	}

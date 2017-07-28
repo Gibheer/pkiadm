@@ -87,7 +87,6 @@ func (p *PrivateKey) Refresh(_ *Storage) error {
 	if err != nil {
 		return err
 	}
-	block.Headers = map[string]string{"ID": p.ID}
 	p.Key = pem.EncodeToMemory(&block)
 	return nil
 }

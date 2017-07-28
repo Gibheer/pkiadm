@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gibheer/pki"
 	"github.com/gibheer/pkiadm"
 )
@@ -33,25 +35,51 @@ func NewCA(id string, caType pkiadm.CAType, cert pkiadm.ResourceName) (*CA, erro
 }
 
 // Sign the certificate sign request with this CA
-func (ca *CA) Sign(lookup *Storage, csr *pki.CertificateRequest, opts pki.CertificateOptions) (*pki.Certificate, error) {
-	caCertDef, err := lookup.GetCertificate(ca.Certificate)
+func (ca *CA) Sign(lookup *Storage, csr pkiadm.ResourceName, opts pki.CertificateOptions) (*pki.Certificate, error) {
+	var caCert *pki.Certificate
+	var pk pki.PrivateKey
+	var caCertDef *Certificate
+
+	csrRes, err := lookup.GetCSR(csr)
 	if err != nil {
 		return nil, err
 	}
-	caCert, err := caCertDef.GetCertificate()
-	if err != nil {
-		return nil, err
-	}
-	pkDef, err := lookup.GetPrivateKey(caCertDef.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-	pk, err := pkDef.GetKey()
+	csrIns, err := csrRes.GetCSR()
 	if err != nil {
 		return nil, err
 	}
 
-	return csr.ToCertificate(pk, opts, caCert)
+	if ca == CASelfSign {
+		pkDef, err := lookup.GetPrivateKey(csrRes.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		pk, err = pkDef.GetKey()
+		if err != nil {
+			return nil, err
+		}
+		caCertDef = &Certificate{ID: "self-signed"}
+	} else {
+		caCertDef, err = lookup.GetCertificate(ca.Certificate)
+		if err != nil {
+			return nil, err
+		}
+		caCert, err = caCertDef.GetCertificate()
+		if err != nil {
+			return nil, err
+		}
+		pkDef, err := lookup.GetPrivateKey(caCertDef.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		pk, err = pkDef.GetKey()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	log.Printf("ca '%s' signing csr '%s' using cert '%s'", ca.ID, csr.ID, caCertDef.ID)
+	return csrIns.ToCertificate(pk, opts, caCert)
 }
 
 // Return the unique ResourceName
@@ -135,7 +163,7 @@ func (s *Server) ShowCA(inCA pkiadm.CA, res *pkiadm.ResultCA) error {
 
 	ca, err := s.storage.GetCA(pkiadm.ResourceName{ID: inCA.ID, Type: pkiadm.RTCA})
 	if err != nil {
-		res.Result.SetError(err, "Could not find private key '%s'", inCA.ID)
+		res.Result.SetError(err, "Could not find CA '%s'", inCA.ID)
 		return nil
 	}
 	res.CAs = []pkiadm.CA{pkiadm.CA{

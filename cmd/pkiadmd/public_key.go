@@ -44,7 +44,6 @@ func (p *PublicKey) Refresh(lookup *Storage) error {
 	if err != nil {
 		return err
 	}
-	block.Headers = map[string]string{"ID": p.ID, "TYPE": p.Type.String()}
 	p.Key = pem.EncodeToMemory(&block)
 	return nil
 }

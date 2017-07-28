@@ -359,6 +359,7 @@ func (s *Storage) Update(rn pkiadm.ResourceName) error {
 	}
 
 	for _, dep := range updateOrder {
+		log.Printf("refreshing resource '%s' because of '%s'", dep.Name(), rn.String())
 		if err := dep.Refresh(s); err != nil {
 			return err
 		}

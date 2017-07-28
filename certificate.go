@@ -10,6 +10,7 @@ type (
 
 		IsCA     bool
 		Duration time.Duration
+		Created  time.Time
 
 		PrivateKey ResourceName
 		Serial     ResourceName
