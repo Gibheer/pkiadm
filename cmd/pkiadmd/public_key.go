@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	"github.com/gibheer/pkiadm"
 )
@@ -14,13 +15,21 @@ type (
 		PrivateKey pkiadm.ResourceName
 		Type       pkiadm.PrivateKeyType // mark the type of the public key
 		Key        []byte
+
+		Interval Interval
 	}
 )
 
-func NewPublicKey(id string, pk pkiadm.ResourceName) (*PublicKey, error) {
+func NewPublicKey(id string, pk pkiadm.ResourceName, refreshAfter time.Duration,
+	invalidAfter time.Duration) (*PublicKey, error) {
 	pub := PublicKey{
 		ID:         id,
 		PrivateKey: pk,
+		Interval: Interval{
+			Created:      time.Now(),
+			RefreshAfter: refreshAfter,
+			InvalidAfter: invalidAfter,
+		},
 	}
 	return &pub, nil
 }
@@ -45,7 +54,12 @@ func (p *PublicKey) Refresh(lookup *Storage) error {
 		return err
 	}
 	p.Key = pem.EncodeToMemory(&block)
+	p.Interval.LastRefresh = time.Now()
 	return nil
+}
+
+func (p *PublicKey) RefreshInterval() Interval {
+	return p.Interval
 }
 
 func (p *PublicKey) DependsOn() []pkiadm.ResourceName {
@@ -64,7 +78,7 @@ func (s *Server) CreatePublicKey(inPub pkiadm.PublicKey, res *pkiadm.Result) err
 	s.lock()
 	defer s.unlock()
 
-	pub, err := NewPublicKey(inPub.ID, inPub.PrivateKey)
+	pub, err := NewPublicKey(inPub.ID, inPub.PrivateKey, 0, 0)
 	if err != nil {
 		res.SetError(err, "Could not create public key '%s'", inPub.ID)
 		return nil

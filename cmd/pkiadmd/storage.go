@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
+	"time"
 
 	"github.com/gibheer/pkiadm"
 	"github.com/pkg/errors"
@@ -28,6 +30,19 @@ type (
 		// dependencies maps from a resource name to all resources which depend
 		// on it.
 		dependencies map[string]map[string]Resource
+		// refresh order contains all resources in the order they need to be
+		// refreshed next.
+		refreshOrder RefreshList
+		refreshTimer *time.Timer
+	}
+
+	// RefreshList is a list of resources
+	RefreshList []RefreshSet
+	// RefreshSet contains the vital information to decide, when to refresh
+	// the specified resource.
+	RefreshSet struct {
+		Name     pkiadm.ResourceName
+		Interval Interval
 	}
 )
 
@@ -68,6 +83,7 @@ func (s *Storage) load() error {
 	if err := s.refreshDependencies(); err != nil {
 		return err
 	}
+	s.scanForRefresh()
 	return nil
 }
 
@@ -99,6 +115,69 @@ func (s *Storage) refreshDependencies() error {
 		_ = s.addDependency(ca)
 	}
 	return nil
+}
+
+// scanForRefresh updates the list of resources that need an update.
+func (s *Storage) scanForRefresh() {
+	if s.refreshTimer != nil {
+		s.refreshTimer.Stop()
+	}
+	refList := RefreshList{}
+	for _, res := range s.PrivateKeys {
+		refList.Add(res)
+	}
+	for _, res := range s.PublicKeys {
+		refList.Add(res)
+	}
+	for _, res := range s.CSRs {
+		refList.Add(res)
+	}
+	for _, res := range s.Certificates {
+		refList.Add(res)
+	}
+	for _, res := range s.Locations {
+		refList.Add(res)
+	}
+	sort.Sort(refList)
+	if len(refList) == 0 {
+		log.Println("nothing found to refresh, looking again in 24h")
+		s.refreshTimer = time.AfterFunc(24*time.Hour, s.scanForRefresh)
+		return
+	}
+	s.refreshOrder = refList
+	duration := refList[0].Interval.LastRefresh.
+		Add(refList[0].Interval.RefreshAfter).
+		Sub(time.Now())
+	if duration <= 5*time.Second {
+		duration = 5 * time.Second
+	}
+	log.Printf("next refresh planned for '%s' in %s", refList[0].Name, duration)
+	s.refreshTimer = time.AfterFunc(
+		duration,
+		s.refresh,
+	)
+}
+
+func (s *Storage) refresh() {
+	if len(s.refreshOrder) == 0 {
+		return
+	}
+	resName := s.refreshOrder[0].Name
+	res, err := s.Get(resName)
+	if err != nil {
+		// the resource doesn't exist anymore, so just rescan
+		log.Printf("resource to refresh has gone away: %s", resName)
+		goto rescan
+	}
+	if err := res.Refresh(s); err != nil {
+		log.Printf("error refreshing resource '%s': %s", res.Name(), err)
+	}
+	if err := s.store(); err != nil {
+		log.Printf("could not update resources: %s", err)
+	}
+rescan:
+	log.Printf("rescanning for new entries")
+	s.scanForRefresh()
 }
 
 // addDependency adds a resource to the dependency graph.
@@ -138,6 +217,7 @@ func (s *Storage) AddSerial(se *Serial) error {
 		return err
 	}
 	s.Serials[se.Name().ID] = se
+	s.scanForRefresh()
 	return s.addDependency(se)
 }
 
@@ -150,6 +230,7 @@ func (s *Storage) AddSubject(se *Subject) error {
 		return err
 	}
 	s.Subjects[se.Name().ID] = se
+	s.scanForRefresh()
 	return s.addDependency(se)
 }
 
@@ -159,6 +240,7 @@ func (s *Storage) AddPrivateKey(pk *PrivateKey) error {
 		return err
 	}
 	s.PrivateKeys[pk.Name().ID] = pk
+	s.scanForRefresh()
 	return s.addDependency(pk)
 }
 
@@ -168,6 +250,7 @@ func (s *Storage) AddPublicKey(pub *PublicKey) error {
 		return err
 	}
 	s.PublicKeys[pub.Name().ID] = pub
+	s.scanForRefresh()
 	return s.addDependency(pub)
 }
 
@@ -177,6 +260,7 @@ func (s *Storage) AddCertificate(cert *Certificate) error {
 		return err
 	}
 	s.Certificates[cert.Name().ID] = cert
+	s.scanForRefresh()
 	return s.addDependency(cert)
 }
 
@@ -186,6 +270,7 @@ func (s *Storage) AddCSR(csr *CSR) error {
 		return err
 	}
 	s.CSRs[csr.Name().ID] = csr
+	s.scanForRefresh()
 	return s.addDependency(csr)
 }
 
@@ -195,6 +280,7 @@ func (s *Storage) AddLocation(l *Location) error {
 		return err
 	}
 	s.Locations[l.Name().ID] = l
+	s.scanForRefresh()
 	return s.addDependency(l)
 }
 
@@ -203,6 +289,7 @@ func (s *Storage) AddCA(ca *CA) error {
 		return err
 	}
 	s.CAs[ca.Name().ID] = ca
+	s.scanForRefresh()
 	return s.addDependency(ca)
 }
 
@@ -326,6 +413,7 @@ func (s *Storage) Remove(r Resource) error {
 			delete(deps, r.Name().String())
 		}
 	}
+	s.scanForRefresh()
 	return nil
 }
 
@@ -364,5 +452,65 @@ func (s *Storage) Update(rn pkiadm.ResourceName) error {
 			return err
 		}
 	}
+	s.scanForRefresh()
 	return nil
+}
+
+// List returns all currently registered resources.
+func (s *Storage) List() []Resource {
+	resources := []Resource{}
+	for _, res := range s.PrivateKeys {
+		resources = append(resources, res)
+	}
+	for _, res := range s.PublicKeys {
+		resources = append(resources, res)
+	}
+	for _, res := range s.Locations {
+		resources = append(resources, res)
+	}
+	for _, res := range s.Certificates {
+		resources = append(resources, res)
+	}
+	for _, res := range s.CSRs {
+		resources = append(resources, res)
+	}
+	for _, res := range s.Serials {
+		resources = append(resources, res)
+	}
+	for _, res := range s.Subjects {
+		resources = append(resources, res)
+	}
+	return resources
+}
+
+// Add adds a resource to the refreshList when it should be refreshed.
+func (refList *RefreshList) Add(res Resource) {
+	refSet := RefreshSet{
+		Name:     res.Name(),
+		Interval: res.RefreshInterval(),
+	}
+	if refSet.Interval.RefreshAfter <= 0 {
+		return
+	}
+	newRefList := append(*refList, refSet)
+	*refList = newRefList
+}
+
+// Len is the number of elements in the collection.
+func (refList RefreshList) Len() int { return len(refList) }
+
+// Less reports whether the element with
+// index i should sort before the element with index j.
+func (refList RefreshList) Less(i, j int) bool {
+	return 0 > refList[i].Interval.LastRefresh.Add(
+		refList[i].Interval.RefreshAfter,
+	).Sub(
+		refList[j].Interval.LastRefresh.Add(
+			refList[j].Interval.RefreshAfter),
+	)
+}
+
+// Swap swaps the elements with indexes i and j.
+func (refList RefreshList) Swap(i, j int) {
+	refList[i], refList[j] = refList[j], refList[i]
 }

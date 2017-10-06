@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"text/tabwriter"
 
 	"github.com/gibheer/pkiadm"
@@ -185,6 +186,7 @@ func list(args []string, c *pkiadm.Client) error {
 	if err != nil {
 		return err
 	}
+	sort.Sort(resources)
 	out := tabwriter.NewWriter(os.Stdout, 0, 4, 1, ' ', 0)
 	fmt.Fprintf(out, "%s\t%s\t\n", "type", "id")
 	for _, res := range resources {

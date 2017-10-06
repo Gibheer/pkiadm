@@ -22,6 +22,7 @@ type (
 		ID          string
 		Type        pkiadm.CAType
 		Certificate pkiadm.ResourceName
+		Interval    Interval
 	}
 )
 
@@ -87,10 +88,16 @@ func (ca *CA) Name() pkiadm.ResourceName {
 	return pkiadm.ResourceName{ca.ID, pkiadm.RTCA}
 }
 
-// AddDependency registers a depending resource to be retuened by Dependencies()
-// Refresh must trigger a rebuild of the resource.
+// Refresh must trigger a rebuild of the resource. In this case, this is a NOOP.
 func (ca *CA) Refresh(*Storage) error {
 	return nil
+}
+
+// RefreshInterval returns the dates and interval settings which are used to
+// decide when to trigger a refresh for the resource.
+// For CAs, this is a NOOP, as the underlying cert needs the refresh.
+func (ca *CA) RefreshInterval() Interval {
+	return NoInterval
 }
 
 // Return the PEM output of the contained resource.

@@ -4,6 +4,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/gibheer/pki"
 	"github.com/gibheer/pkiadm"
@@ -13,6 +14,9 @@ type (
 	CSR struct {
 		// ID is the unique identifier of the CSR.
 		ID string
+
+		// Interval represents the refresh timing information.
+		Interval Interval
 
 		// The following options are used to generate the content of the CSR.
 		DNSNames       []string
@@ -30,7 +34,8 @@ type (
 
 // NewCSR creates a new CSR.
 func NewCSR(id string, pk, subject pkiadm.ResourceName, dnsNames []string,
-	emailAddresses []string, iPAddresses []net.IP) (*CSR, error) {
+	emailAddresses []string, iPAddresses []net.IP, refreshAfter time.Duration,
+	invalidAfter time.Duration) (*CSR, error) {
 	return &CSR{
 		ID:             id,
 		Subject:        subject,
@@ -38,6 +43,11 @@ func NewCSR(id string, pk, subject pkiadm.ResourceName, dnsNames []string,
 		EmailAddresses: emailAddresses,
 		IPAddresses:    iPAddresses,
 		PrivateKey:     pk,
+		Interval: Interval{
+			Created:      time.Now(),
+			RefreshAfter: refreshAfter,
+			InvalidAfter: invalidAfter,
+		},
 	}, nil
 }
 
@@ -78,7 +88,12 @@ func (c *CSR) Refresh(lookup *Storage) error {
 		return err
 	}
 	c.Data = pem.EncodeToMemory(&block)
+	c.Interval.LastRefresh = time.Now()
 	return nil
+}
+
+func (c *CSR) RefreshInterval() Interval {
+	return c.Interval
 }
 
 // Return the PEM output of the contained resource.
@@ -111,6 +126,7 @@ func (s *Server) CreateCSR(inCSR pkiadm.CSR, res *pkiadm.Result) error {
 		inCSR.DNSNames,
 		inCSR.EmailAddresses,
 		inCSR.IPAddresses,
+		0, 0,
 	)
 	if err != nil {
 		res.SetError(err, "Could not create new private key '%s'", inCSR.ID)

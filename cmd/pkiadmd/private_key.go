@@ -4,6 +4,7 @@ import (
 	"crypto/elliptic"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	"github.com/gibheer/pki"
 	"github.com/gibheer/pkiadm"
@@ -17,14 +18,15 @@ const (
 
 type (
 	PrivateKey struct {
-		ID     string
-		PKType pkiadm.PrivateKeyType
-		Bits   uint
-		Key    []byte
+		ID       string
+		PKType   pkiadm.PrivateKeyType
+		Bits     uint
+		Key      []byte
+		Interval Interval
 	}
 )
 
-func NewPrivateKey(id string, pkType pkiadm.PrivateKeyType, bits uint) (*PrivateKey, error) {
+func NewPrivateKey(id string, pkType pkiadm.PrivateKeyType, bits uint, interval Interval) (*PrivateKey, error) {
 	if id == "" {
 		return nil, ENoIDGiven
 	}
@@ -32,9 +34,10 @@ func NewPrivateKey(id string, pkType pkiadm.PrivateKeyType, bits uint) (*Private
 		return nil, err
 	}
 	pk := PrivateKey{
-		ID:     id,
-		PKType: pkType,
-		Bits:   bits,
+		ID:       id,
+		PKType:   pkType,
+		Bits:     bits,
+		Interval: interval,
 	}
 	return &pk, nil
 }
@@ -88,7 +91,14 @@ func (p *PrivateKey) Refresh(_ *Storage) error {
 		return err
 	}
 	p.Key = pem.EncodeToMemory(&block)
+	p.Interval.LastRefresh = time.Now()
 	return nil
+}
+
+// RefreshInterval returns the dates and interval settings which are used to
+// decide when to trigger a refresh for the resource.
+func (p *PrivateKey) RefreshInterval() Interval {
+	return p.Interval
 }
 
 func (p *PrivateKey) GetKey() (pki.PrivateKey, error) {
@@ -139,7 +149,7 @@ func (s *Server) CreatePrivateKey(inPk pkiadm.PrivateKey, res *pkiadm.Result) er
 	s.lock()
 	defer s.unlock()
 
-	pk, err := NewPrivateKey(inPk.ID, inPk.Type, inPk.Bits)
+	pk, err := NewPrivateKey(inPk.ID, inPk.Type, inPk.Bits, NoInterval)
 	if err != nil {
 		res.SetError(err, "Could not create new private key '%s'", inPk.ID)
 		return nil

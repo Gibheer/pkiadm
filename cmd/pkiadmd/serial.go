@@ -33,12 +33,16 @@ func NewSerial(id string, min, max int64) (*Serial, error) {
 // Return the unique ResourceName
 func (s *Serial) Name() pkiadm.ResourceName { return pkiadm.ResourceName{s.ID, pkiadm.RTSerial} }
 
-// AddDependency registers a depending resource to be retuened by Dependencies()
 // Refresh must trigger a rebuild of the resource.
 func (s *Serial) Refresh(*Storage) error {
 	// This is a NOOP, because there is nothing to refresh. Depending resources
 	// pull their new ID themselves.
 	return nil
+}
+
+// RefreshInterval is a NOOP here, as serials can't be refreshed.
+func (s *Serial) RefreshInterval() Interval {
+	return NoInterval
 }
 
 // Return the PEM output of the contained resource.

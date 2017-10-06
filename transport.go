@@ -49,6 +49,21 @@ type ResourceType uint
 
 func (r ResourceName) String() string { return r.Type.String() + "/" + r.ID }
 
+type ResourceNameList []ResourceName
+
+func (r ResourceNameList) Len() int {
+	return len(r)
+}
+func (r ResourceNameList) Less(i, j int) bool {
+	if r[i].Type != r[j].Type {
+		return r[i].Type < r[j].Type
+	}
+	return r[i].ID < r[j].ID
+}
+func (r ResourceNameList) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
+}
+
 type Filter struct{}
 
 type ResultResource struct {
@@ -56,7 +71,7 @@ type ResultResource struct {
 	Resources []ResourceName
 }
 
-func (c *Client) List() ([]ResourceName, error) {
+func (c *Client) List() (ResourceNameList, error) {
 	result := ResultResource{}
 	if err := c.query("List", Filter{}, &result); err != nil {
 		return []ResourceName{}, err

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/gibheer/pkiadm"
 )
@@ -23,10 +24,13 @@ type (
 
 		Path         string
 		Dependencies []pkiadm.ResourceName
+
+		Interval Interval
 	}
 )
 
-func NewLocation(id, path, preCom, postCom string, res []pkiadm.ResourceName) (*Location, error) {
+func NewLocation(id, path, preCom, postCom string, res []pkiadm.ResourceName,
+	interval Interval) (*Location, error) {
 	if id == "" {
 		return nil, ENoIDGiven
 	}
@@ -37,6 +41,7 @@ func NewLocation(id, path, preCom, postCom string, res []pkiadm.ResourceName) (*
 		ID:           id,
 		Path:         path,
 		Dependencies: res,
+		Interval:     interval,
 	}
 	return l, nil
 }
@@ -78,7 +83,12 @@ func (l *Location) Refresh(lookup *Storage) error {
 			return err
 		}
 	}
+	l.Interval.LastRefresh = time.Now()
 	return nil
+}
+
+func (l *Location) RefreshInterval() Interval {
+	return l.Interval
 }
 
 func (l *Location) DependsOn() []pkiadm.ResourceName { return l.Dependencies }
@@ -97,7 +107,7 @@ func (s *Server) CreateLocation(inLoc pkiadm.Location, res *pkiadm.Result) error
 	for _, dep := range inLoc.Dependencies {
 		deps = append(deps, pkiadm.ResourceName{ID: dep.ID, Type: dep.Type})
 	}
-	loc, err := NewLocation(inLoc.ID, inLoc.Path, inLoc.PreCommand, inLoc.PostCommand, deps)
+	loc, err := NewLocation(inLoc.ID, inLoc.Path, inLoc.PreCommand, inLoc.PostCommand, deps, NoInterval)
 	if err != nil {
 		res.SetError(err, "Could not create location '%s'", inLoc.ID)
 		return nil

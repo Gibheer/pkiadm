@@ -18,6 +18,8 @@ type (
 		ID string
 
 		IsCA     bool
+		Interval Interval
+		// TODO remove obsolete field - got replaced with interval
 		Duration time.Duration
 		Created  time.Time
 
@@ -31,6 +33,11 @@ type (
 )
 
 func NewCertificate(id string, privateKey, serial, csr, ca pkiadm.ResourceName, selfSign bool, duration time.Duration) (*Certificate, error) {
+
+	if id == "" {
+		return nil, ENoIDGiven
+	}
+
 	return &Certificate{
 		ID:         id,
 		PrivateKey: privateKey,
@@ -39,6 +46,10 @@ func NewCertificate(id string, privateKey, serial, csr, ca pkiadm.ResourceName, 
 		CA:         ca,
 		IsCA:       selfSign,
 		Duration:   duration,
+		Interval: Interval{
+			Created:      time.Now(),
+			RefreshAfter: duration,
+		},
 	}, nil
 }
 
@@ -86,8 +97,14 @@ func (c *Certificate) Refresh(lookup *Storage) error {
 		return err
 	}
 	c.Data = pem.EncodeToMemory(&block)
+	// TODO remove obsolete field
 	c.Created = time.Now()
+	c.Interval.LastRefresh = time.Now()
 	return nil
+}
+
+func (c *Certificate) RefreshInterval() Interval {
+	return c.Interval
 }
 
 func (c *Certificate) GetCertificate() (*pki.Certificate, error) {
@@ -156,6 +173,7 @@ func (s *Server) SetCertificate(changeset pkiadm.CertificateChange, res *pkiadm.
 		switch field {
 		case "duration":
 			cert.Duration = change.Duration
+			cert.Interval.RefreshAfter = change.Duration
 		case "private":
 			cert.PrivateKey = change.PrivateKey
 		case "csr":

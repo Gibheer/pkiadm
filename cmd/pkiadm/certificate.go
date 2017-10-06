@@ -88,9 +88,9 @@ func listCertificate(args []string, client *pkiadm.Client) error {
 		return nil
 	}
 	out := tabwriter.NewWriter(os.Stdout, 2, 2, 1, ' ', tabwriter.AlignRight)
-	fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t\n", "id", "private", "csr", "ca", "serial", "created", "duration", "self-signed")
+	fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t\n", "id", "private", "csr", "ca", "serial", "created", "duration", "self-signed")
 	for _, cert := range certs {
-		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%t\t\n", cert.ID, cert.PrivateKey.ID, cert.CSR.ID, cert.CA.ID, cert.Serial.ID, cert.Created, cert.Duration, cert.IsCA)
+		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%t\t\n", cert.ID, cert.PrivateKey.ID, cert.CSR.ID, cert.CA.ID, cert.Serial.ID, cert.Created, cert.Duration, cert.IsCA)
 	}
 	out.Flush()
 

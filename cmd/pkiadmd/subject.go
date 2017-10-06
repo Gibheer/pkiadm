@@ -3,14 +3,16 @@ package main
 import (
 	"crypto/x509/pkix"
 	"fmt"
+	"time"
 
 	"github.com/gibheer/pkiadm"
 )
 
 type (
 	Subject struct {
-		ID   string
-		Data pkix.Name
+		ID      string
+		Data    pkix.Name
+		Created time.Time
 	}
 )
 
@@ -26,10 +28,13 @@ func NewSubject(id string, name pkix.Name) (*Subject, error) {
 // Return the unique ResourceName
 func (sub *Subject) Name() pkiadm.ResourceName { return pkiadm.ResourceName{sub.ID, pkiadm.RTSubject} }
 
-// AddDependency registers a depending resource to be retuened by Dependencies()
 // Refresh must trigger a rebuild of the resource.
 // This is a NOOP as it does not have any dependencies.
 func (sub *Subject) Refresh(_ *Storage) error { return nil }
+
+// RefreshInterval returns the dates and interval settings which are used to
+// decide when to trigger a refresh for the resource.
+func (sub *Subject) RefreshInterval() Interval { return Interval{Created: sub.Created} }
 
 // Return the PEM output of the contained resource.
 func (sub *Subject) Pem() ([]byte, error) { return []byte{}, nil }

@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/gibheer/pkiadm"
 )
@@ -19,18 +20,40 @@ const (
 	EAlreadyExist   = Error("resource already exists")
 )
 
+var (
+	NoInterval = Interval{}
+)
+
 type (
 	Resource interface {
 		// Return the unique ResourceName
 		Name() pkiadm.ResourceName
-		// AddDependency registers a depending resource to be retuened by Dependencies()
 		// Refresh must trigger a rebuild of the resource.
 		Refresh(*Storage) error
+		// RefreshInterval returns the dates and interval settings which are used to
+		// decide when to trigger a refresh for the resource.
+		RefreshInterval() Interval
 		// Return the PEM output of the contained resource.
 		Pem() ([]byte, error)
+		// Return the checksum of the PEM content.
 		Checksum() []byte
 		// DependsOn must return the resource names it is depending on.
 		DependsOn() []pkiadm.ResourceName
+	}
+
+	Interval struct {
+		// Created states the time, the resource was created.
+		Created time.Time
+		// LastRefresh is the time, when the resource was last refreshed.
+		LastRefresh time.Time
+		// RefreshAfter is the duration after which the refresh of the resource
+		// is triggered.
+		RefreshAfter time.Duration
+		// InvalidAfter is the duration after which this resource becomes invalid.
+		// The decision when a resource becomes invalid is based on the created time
+		// and the duration. When the refresh duration is less than the invalid
+		// duration, then the resource will never be invalid.
+		InvalidAfter time.Duration
 	}
 
 	Error string
