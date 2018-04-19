@@ -79,6 +79,7 @@ func (s *Server) SetSubject(changeset pkiadm.SubjectChange, res *pkiadm.Result) 
 	for _, field := range changeset.FieldList {
 		switch field {
 		case "serial":
+			// TODO this should fetch new serials from the serial provider!
 			subj.Data.SerialNumber = changes.SerialNumber
 		case "common-name":
 			subj.Data.CommonName = changes.CommonName
